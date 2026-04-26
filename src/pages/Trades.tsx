@@ -19,7 +19,7 @@ import { format } from "date-fns";
 
 export default function Trades() {
   const { user } = useAuth();
-  const { trades, loading } = useTrades();
+  const { trades, loading, refresh } = useTrades();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Trade>>({});
@@ -27,6 +27,9 @@ export default function Trades() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[] } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     asset: "",
