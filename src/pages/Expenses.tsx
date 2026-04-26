@@ -51,6 +51,41 @@ export default function Expenses() {
     return { income, expense, net: income - expense };
   }, [expenses]);
 
+  const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
+
+  const categoryData = useMemo(() => {
+    const map = new Map<string, number>();
+    expenses
+      .filter((e) => e.type === "expense")
+      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + Number(e.amount)));
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value: Number(convert(value).toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+  }, [expenses, currency, rate]);
+
+  const monthlyData = useMemo(() => {
+    const map = new Map<string, { month: string; income: number; expense: number }>();
+    expenses.forEach((e) => {
+      const key = format(startOfMonth(new Date(e.expense_date)), "yyyy-MM");
+      const label = format(new Date(e.expense_date), "MMM yy");
+      const cur = map.get(key) ?? { month: label, income: 0, expense: 0 };
+      if (e.type === "income") cur.income += Number(e.amount);
+      else cur.expense += Number(e.amount);
+      map.set(key, cur);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([, v]) => ({
+        month: v.month,
+        Income: Number(convert(v.income).toFixed(2)),
+        Expense: Number(convert(v.expense).toFixed(2)),
+      }));
+  }, [expenses, currency, rate]);
+
+  const topCategory = categoryData[0];
+  const totalExpenseConverted = categoryData.reduce((s, c) => s + c.value, 0);
+
   const display = (amount: number) => {
     const v = currency === "THB" ? amount * rate : amount;
     return formatMoney(v, currency);
