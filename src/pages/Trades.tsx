@@ -80,10 +80,43 @@ export default function Trades() {
     setForm({ ...form, asset: "", entry_price: "", exit_price: "", volume: "", pnl: "", note: "" });
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("trades").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Trade deleted");
+  const requestDelete = (ids: string[]) => {
+    if (!ids.length) return;
+    setConfirmDelete({ ids });
+  };
+
+  const performDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    const ids = confirmDelete.ids;
+    const { error } = await supabase.from("trades").delete().in("id", ids);
+    setDeleting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Deleted ${ids.length} trade${ids.length > 1 ? "s" : ""}`);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+    setConfirmDelete(null);
+    // Auto-update list immediately (don't rely on realtime round-trip)
+    refresh();
+  };
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(trades.map((t) => t.id)) : new Set());
   };
 
   const handleExport = () => {
