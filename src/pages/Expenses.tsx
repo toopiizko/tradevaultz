@@ -1,0 +1,200 @@
+import { useEffect, useMemo, useState } from "react";
+import { useExpenses } from "@/hooks/useExpenses";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { EXPENSE_CATEGORIES } from "@/lib/types";
+import { getUsdThbRate, formatMoney } from "@/lib/currency";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+export default function Expenses() {
+  const { user } = useAuth();
+  const { expenses, loading } = useExpenses();
+  const [open, setOpen] = useState(false);
+  const [currency, setCurrency] = useState<"USD" | "THB">("USD");
+  const [rate, setRate] = useState(36);
+
+  const [form, setForm] = useState({
+    type: "expense" as "income" | "expense",
+    amount: "",
+    category: EXPENSE_CATEGORIES.expense[0],
+    description: "",
+    expense_date: format(new Date(), "yyyy-MM-dd"),
+  });
+
+  useEffect(() => {
+    getUsdThbRate().then(setRate);
+  }, []);
+
+  const totals = useMemo(() => {
+    const income = expenses.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
+    const expense = expenses.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
+    return { income, expense, net: income - expense };
+  }, [expenses]);
+
+  const display = (amount: number) => {
+    const v = currency === "THB" ? amount * rate : amount;
+    return formatMoney(v, currency);
+  };
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const { error } = await supabase.from("expenses").insert({
+      user_id: user.id,
+      type: form.type,
+      amount: parseFloat(form.amount),
+      category: form.category,
+      description: form.description || null,
+      expense_date: new Date(form.expense_date).toISOString(),
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Saved!");
+    setOpen(false);
+    setForm({ ...form, amount: "", description: "" });
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Expense Tracker</h1>
+          <p className="text-muted-foreground mt-1">Personal income & expenses (1 USD ≈ {rate.toFixed(2)} THB)</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-border bg-secondary/50 p-0.5">
+            {(["USD", "THB"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                  currency === c ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                <Plus className="h-4 w-4" /> Add
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Add Transaction</DialogTitle></DialogHeader>
+              <form onSubmit={handleAdd} className="space-y-3">
+                <div>
+                  <Label>Type</Label>
+                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: EXPENSE_CATEGORIES[v][0] })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Income</SelectItem>
+                      <SelectItem value="expense">Expense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Amount (USD)</Label>
+                    <Input type="number" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Date</Label>
+                    <Input type="date" required value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label>Category</Label>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {EXPENSE_CATEGORIES[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+                <Button type="submit" className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 lg:gap-4">
+        <div className="stat-card">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowUpCircle className="h-4 w-4 text-success" />
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Income</p>
+          </div>
+          <p className="text-xl lg:text-2xl font-bold text-success">{display(totals.income)}</p>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowDownCircle className="h-4 w-4 text-destructive" />
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Expense</p>
+          </div>
+          <p className="text-xl lg:text-2xl font-bold text-destructive">{display(totals.expense)}</p>
+        </div>
+        <div className="stat-card border-primary/30" style={{ boxShadow: "var(--shadow-glow)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="h-4 w-4 text-primary" />
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Net</p>
+          </div>
+          <p className={`text-xl lg:text-2xl font-bold ${totals.net >= 0 ? "text-success" : "text-destructive"}`}>{display(totals.net)}</p>
+        </div>
+      </div>
+
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 border-b border-border/60">
+              <tr className="text-left">
+                {["Date", "Type", "Category", "Description", "Amount", ""].map((h) => (
+                  <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
+              {!loading && expenses.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">No transactions yet.</td></tr>}
+              {expenses.map((e) => (
+                <tr key={e.id} className="border-b border-border/40 hover:bg-secondary/30">
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+                      {e.type === "income" ? "IN" : "OUT"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs">{e.category}</td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                  <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
+                    {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
