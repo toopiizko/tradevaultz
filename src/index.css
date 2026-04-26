@@ -5,42 +5,42 @@
 /* Premium Trading Journal — Dark Slate/Zinc design system. All colors HSL. */
 
 @layer base {
+  /* Light theme (default when .dark is not present on <html>) */
   :root {
-    /* Force dark by default, but keep light fallback */
-    --background: 222 18% 7%;
-    --foreground: 210 20% 96%;
+    --background: 210 30% 98%;
+    --foreground: 222 18% 12%;
 
-    --card: 222 18% 9%;
-    --card-foreground: 210 20% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 18% 12%;
 
-    --popover: 222 18% 10%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 18% 12%;
 
-    --primary: 174 72% 56%;
-    --primary-foreground: 222 18% 7%;
-    --primary-glow: 174 90% 70%;
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 174 80% 55%;
 
-    --secondary: 222 14% 14%;
-    --secondary-foreground: 210 20% 96%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 18% 12%;
 
-    --muted: 222 14% 13%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 220 10% 40%;
 
-    --accent: 250 70% 65%;
-    --accent-foreground: 222 18% 7%;
+    --accent: 250 70% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
-    --success-foreground: 222 18% 7%;
+    --success: 142 70% 38%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 55%;
-    --warning-foreground: 222 18% 7%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 18% 12%;
 
-    --border: 222 14% 16%;
-    --input: 222 14% 16%;
-    --ring: 174 72% 56%;
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 174 72% 40%;
 
     --radius: 0.75rem;
 
