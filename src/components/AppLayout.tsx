@@ -125,6 +125,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </header>
 
       {/* Main content */}
