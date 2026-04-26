@@ -1,0 +1,140 @@
+import { NavLink, useLocation } from "react-router-dom";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
+
+const primaryNav = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/trades", label: "Trade Log", icon: BookOpen },
+  { to: "/calculator", label: "Calculator", icon: Calculator },
+  { to: "/expenses", label: "Expenses", icon: Wallet },
+];
+
+const secondaryNav = [
+  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
+  { to: "/news", label: "Economic News", icon: Newspaper },
+];
+
+const allNav = [...primaryNav, ...secondaryNav];
+
+function NavItem({ to, label, icon: Icon, onClick }: any) {
+  return (
+    <NavLink
+      to={to}
+      end={to === "/"}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+          isActive
+            ? "bg-primary/15 text-primary border border-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+        }`
+      }
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </NavLink>
+  );
+}
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, signOut } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  return (
+    <div className="min-h-screen flex w-full">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col border-r border-border/60 bg-sidebar/80 backdrop-blur-xl fixed inset-y-0 left-0 z-30">
+        <div className="p-6 border-b border-border/60">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
+              <TrendingUp className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h2 className="font-bold tracking-tight">Trader's Ledger</h2>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pro Journal</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Main</p>
+          {primaryNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Insights</p>
+          {secondaryNav.map((item) => <NavItem key={item.to} {...item} />)}
+        </nav>
+
+        <div className="p-3 border-t border-border/60">
+          <div className="px-3 py-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive">
+            <LogOut className="h-4 w-4" /> Sign out
+          </Button>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center justify-between px-4 bg-background/80 backdrop-blur-xl border-b border-border/60">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
+            <TrendingUp className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="font-semibold text-sm">Trader's Ledger</span>
+        </div>
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-72 bg-sidebar border-border/60">
+            <div className="flex flex-col h-full pt-6">
+              <p className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Menu</p>
+              <nav className="space-y-1 flex-1">
+                {allNav.map((item) => (
+                  <NavItem key={item.to} {...item} onClick={() => setMobileOpen(false)} />
+                ))}
+              </nav>
+              <div className="border-t border-border/60 pt-3">
+                <div className="px-3 py-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+                <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start gap-2 text-destructive">
+                  <LogOut className="h-4 w-4" /> Sign out
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </header>
+
+      {/* Main content */}
+      <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 min-h-screen">
+        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+          {children}
+        </div>
+      </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60">
+        <div className="grid grid-cols-4">
+          {primaryNav.map((item) => {
+            const Icon = item.icon;
+            const active = location.pathname === item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={`flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
