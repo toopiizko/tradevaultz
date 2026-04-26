@@ -11,13 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function Trades() {
   const { user } = useAuth();
-  const { trades, loading } = useTrades();
+  const { trades, loading, refresh } = useTrades();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Trade>>({});
@@ -25,6 +27,9 @@ export default function Trades() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[] } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     asset: "",
@@ -75,10 +80,43 @@ export default function Trades() {
     setForm({ ...form, asset: "", entry_price: "", exit_price: "", volume: "", pnl: "", note: "" });
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("trades").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Trade deleted");
+  const requestDelete = (ids: string[]) => {
+    if (!ids.length) return;
+    setConfirmDelete({ ids });
+  };
+
+  const performDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    const ids = confirmDelete.ids;
+    const { error } = await supabase.from("trades").delete().in("id", ids);
+    setDeleting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Deleted ${ids.length} trade${ids.length > 1 ? "s" : ""}`);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+    setConfirmDelete(null);
+    // Auto-update list immediately (don't rely on realtime round-trip)
+    refresh();
+  };
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(trades.map((t) => t.id)) : new Set());
   };
 
   const handleExport = () => {
@@ -255,12 +293,34 @@ export default function Trades() {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="glass-card rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="text-sm font-medium">
+            {selected.size} selected
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => requestDelete(Array.from(selected))}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop full table */}
       <div className="glass-card rounded-xl overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
+                <th className="px-3 py-2.5 w-10">
+                  <Checkbox
+                    checked={trades.length > 0 && selected.size === trades.length}
+                    onCheckedChange={(c) => toggleAll(!!c)}
+                    aria-label="Select all"
+                  />
+                </th>
                 {["Date", "Asset", "Side", "Entry", "Exit", "Vol", "Strategy", "🎭", "P&L", ""].map((h) => (
                   <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
                 ))}
@@ -268,15 +328,23 @@ export default function Trades() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={10} className="py-12 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!loading && trades.length === 0 && (
-                <tr><td colSpan={10} className="py-12 text-center text-muted-foreground">No trades yet. Click "New Trade" above.</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-muted-foreground">No trades yet. Click "New Trade" above.</td></tr>
               )}
               {trades.map((t) => {
                 const isEdit = editingId === t.id;
+                const isSelected = selected.has(t.id);
                 return (
-                  <tr key={t.id} className="border-b border-border/40 hover:bg-secondary/30 transition-colors">
+                  <tr key={t.id} className={`border-b border-border/40 hover:bg-secondary/30 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(c) => toggleOne(t.id, !!c)}
+                        aria-label={`Select ${t.asset}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</td>
                     <td className="px-3 py-2 font-semibold">
                       {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : t.asset}
@@ -320,7 +388,7 @@ export default function Trades() {
                         ) : (
                           <>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(t)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(t.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => requestDelete([t.id])}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </>
                         )}
                       </div>
@@ -335,7 +403,12 @@ export default function Trades() {
 
       {/* Mobile compact list — Asset / Volume / P&L; tap row to expand */}
       <div className="md:hidden glass-card rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-2.5 bg-secondary/40 border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-3 py-2.5 bg-secondary/40 border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground font-medium items-center">
+          <Checkbox
+            checked={trades.length > 0 && selected.size === trades.length}
+            onCheckedChange={(c) => toggleAll(!!c)}
+            aria-label="Select all"
+          />
           <span>Asset</span>
           <span className="text-right">Vol</span>
           <span className="text-right">P&L</span>
@@ -347,24 +420,33 @@ export default function Trades() {
         {trades.map((t) => {
           const isOpen = expandedId === t.id;
           const pnlNum = Number(t.pnl);
+          const isSelected = selected.has(t.id);
           return (
-            <div key={t.id} className="border-b border-border/40 last:border-b-0">
-              <button
-                onClick={() => setExpandedId(isOpen ? null : t.id)}
-                className="w-full grid grid-cols-[1fr_auto_auto] gap-3 items-center px-3 py-3 text-left hover:bg-secondary/30 transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
+            <div key={t.id} className={`border-b border-border/40 last:border-b-0 ${isSelected ? "bg-primary/5" : ""}`}>
+              <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 items-center px-3 py-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(c) => toggleOne(t.id, !!c)}
+                  aria-label={`Select ${t.asset}`}
+                />
+                <button
+                  onClick={() => setExpandedId(isOpen ? null : t.id)}
+                  className="flex items-center gap-2 min-w-0 text-left"
+                >
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">{t.asset}</div>
                     <div className="text-[10px] text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</div>
                   </div>
-                </div>
-                <span className="text-sm tabular-nums text-right">{Number(t.volume)}</span>
-                <span className={`font-bold tabular-nums text-right text-sm ${pnlNum >= 0 ? "text-success" : "text-destructive"}`}>
+                </button>
+                <span className="text-sm tabular-nums text-right" onClick={() => setExpandedId(isOpen ? null : t.id)}>{Number(t.volume)}</span>
+                <span
+                  className={`font-bold tabular-nums text-right text-sm ${pnlNum >= 0 ? "text-success" : "text-destructive"}`}
+                  onClick={() => setExpandedId(isOpen ? null : t.id)}
+                >
                   {pnlNum >= 0 ? "+" : ""}{pnlNum.toFixed(2)}
                 </span>
-              </button>
+              </div>
 
               {isOpen && (
                 <div className="px-3 pb-3 pt-1 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs bg-secondary/20">
@@ -390,7 +472,7 @@ export default function Trades() {
                     <Button size="sm" variant="outline" className="h-8" onClick={() => { startEdit(t); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 text-destructive border-destructive/30" onClick={() => handleDelete(t.id)}>
+                    <Button size="sm" variant="outline" className="h-8 text-destructive border-destructive/30" onClick={() => requestDelete([t.id])}>
                       <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                     </Button>
                   </div>
@@ -450,6 +532,28 @@ export default function Trades() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && !deleting && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {confirmDelete?.ids.length} trade{(confirmDelete?.ids.length ?? 0) > 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The selected trades will be permanently removed from your history and dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); performDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
