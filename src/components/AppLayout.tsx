@@ -1,13 +1,14 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus } from "lucide-react";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 
 const primaryNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/trades", label: "Trade Log", icon: BookOpen },
+  { to: "/trades", label: "Trade History", icon: BookOpen },
   { to: "/calculator", label: "Calculator", icon: Calculator },
   { to: "/expenses", label: "Expenses", icon: Wallet },
 ];
@@ -41,6 +42,7 @@ function NavItem({ to, label, icon: Icon, onClick }: any) {
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  const { theme, toggle } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -59,14 +61,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col border-r border-border/60 bg-sidebar/80 backdrop-blur-xl fixed inset-y-0 left-0 z-30">
         <div className="p-6 border-b border-border/60">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-              <TrendingUp className="h-5 w-5 text-primary-foreground" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
+                <TrendingUp className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-bold tracking-tight truncate">TradeVaultz</h2>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pro Journal</p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-bold tracking-tight">Trader's Ledger</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pro Journal</p>
-            </div>
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme" className="h-8 w-8 shrink-0">
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
@@ -91,12 +98,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <TrendingUp className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sm">Trader's Ledger</span>
+          <span className="font-semibold text-sm">TradeVaultz</span>
         </div>
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
-          </SheetTrigger>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
+            </SheetTrigger>
           <SheetContent side="right" className="w-72 bg-sidebar border-border/60">
             <div className="flex flex-col h-full pt-6">
               <p className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Menu</p>
