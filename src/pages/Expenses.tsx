@@ -9,9 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfMonth } from "date-fns";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+
+const CHART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "hsl(var(--destructive))",
+  "hsl(48 96% 53%)",
+  "hsl(280 70% 60%)",
+  "hsl(190 80% 55%)",
+  "hsl(20 90% 60%)",
+  "hsl(150 60% 50%)",
+  "hsl(330 70% 60%)",
+];
 
 export default function Expenses() {
   const { user } = useAuth();
