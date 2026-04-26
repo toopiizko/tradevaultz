@@ -9,9 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfMonth } from "date-fns";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+
+const CHART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "hsl(var(--destructive))",
+  "hsl(48 96% 53%)",
+  "hsl(280 70% 60%)",
+  "hsl(190 80% 55%)",
+  "hsl(20 90% 60%)",
+  "hsl(150 60% 50%)",
+  "hsl(330 70% 60%)",
+];
 
 export default function Expenses() {
   const { user } = useAuth();
@@ -37,6 +50,41 @@ export default function Expenses() {
     const expense = expenses.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
     return { income, expense, net: income - expense };
   }, [expenses]);
+
+  const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
+
+  const categoryData = useMemo(() => {
+    const map = new Map<string, number>();
+    expenses
+      .filter((e) => e.type === "expense")
+      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + Number(e.amount)));
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value: Number(convert(value).toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+  }, [expenses, currency, rate]);
+
+  const monthlyData = useMemo(() => {
+    const map = new Map<string, { month: string; income: number; expense: number }>();
+    expenses.forEach((e) => {
+      const key = format(startOfMonth(new Date(e.expense_date)), "yyyy-MM");
+      const label = format(new Date(e.expense_date), "MMM yy");
+      const cur = map.get(key) ?? { month: label, income: 0, expense: 0 };
+      if (e.type === "income") cur.income += Number(e.amount);
+      else cur.expense += Number(e.amount);
+      map.set(key, cur);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([, v]) => ({
+        month: v.month,
+        Income: Number(convert(v.income).toFixed(2)),
+        Expense: Number(convert(v.expense).toFixed(2)),
+      }));
+  }, [expenses, currency, rate]);
+
+  const topCategory = categoryData[0];
+  const totalExpenseConverted = categoryData.reduce((s, c) => s + c.value, 0);
 
   const display = (amount: number) => {
     const v = currency === "THB" ? amount * rate : amount;
@@ -173,6 +221,81 @@ export default function Expenses() {
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Net</p>
           </div>
           <p className={`text-xl lg:text-2xl font-bold ${totals.net >= 0 ? "text-success" : "text-destructive"}`}>{display(totals.net)}</p>
+        </div>
+      </div>
+
+      {/* Insights dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PieIcon className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Spending by Category</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">{currency}</span>
+          </div>
+          <div className="h-64">
+            {categoryData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No expenses yet</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
+                  >
+                    {categoryData.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => formatMoney(v, currency)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          {topCategory && (
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Top category</span>
+              <span className="font-semibold">
+                {topCategory.name} · {((topCategory.value / totalExpenseConverted) * 100).toFixed(0)}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Monthly Trend</h2>
+            <span className="text-xs text-muted-foreground">Last 6 months</span>
+          </div>
+          <div className="h-64">
+            {monthlyData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => formatMoney(v, currency)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="Income" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
       </div>
 
