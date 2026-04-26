@@ -1,5 +1,5 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -43,6 +43,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Split into 2 + center FAB + 2
+  const leftNav = primaryNav.slice(0, 2);
+  const rightNav = primaryNav.slice(2);
+
+  const handleAddTrade = () => {
+    // Navigate to trades and signal to open the dialog
+    navigate("/trades?new=1");
+  };
 
   return (
     <div className="min-h-screen flex w-full">
@@ -113,10 +123,40 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav with center FAB */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60">
-        <div className="grid grid-cols-4">
-          {primaryNav.map((item) => {
+        <div className="grid grid-cols-5 items-end relative">
+          {leftNav.map((item) => {
+            const Icon = item.icon;
+            const active = location.pathname === item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={`flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </NavLink>
+            );
+          })}
+
+          {/* Center FAB */}
+          <div className="flex justify-center">
+            <button
+              onClick={handleAddTrade}
+              aria-label="Add new trade"
+              className="-mt-6 h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-4 border-background transition-transform active:scale-95"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <Plus className="h-6 w-6 text-primary-foreground" />
+            </button>
+          </div>
+
+          {rightNav.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.to;
             return (

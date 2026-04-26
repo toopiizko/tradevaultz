@@ -46,10 +46,14 @@ export default function Expenses() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const inputAmount = parseFloat(form.amount);
+    if (Number.isNaN(inputAmount)) return toast.error("Invalid amount");
+    // Always store in USD (base currency); convert if user typed in THB
+    const amountUsd = currency === "THB" ? inputAmount / rate : inputAmount;
     const { error } = await supabase.from("expenses").insert({
       user_id: user.id,
       type: form.type,
-      amount: parseFloat(form.amount),
+      amount: amountUsd,
       category: form.category,
       description: form.description || null,
       expense_date: new Date(form.expense_date).toISOString(),
@@ -108,8 +112,20 @@ export default function Expenses() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Amount (USD)</Label>
-                    <Input type="number" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                    <Label>Amount ({currency})</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={form.amount}
+                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                      placeholder={currency === "THB" ? "e.g. 1000" : "e.g. 25.00"}
+                    />
+                    {currency === "THB" && form.amount && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        ≈ ${(parseFloat(form.amount) / rate || 0).toFixed(2)} USD (stored)
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Date</Label>
