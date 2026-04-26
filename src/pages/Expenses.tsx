@@ -224,9 +224,82 @@ export default function Expenses() {
         </div>
       </div>
 
+      {/* Insights dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PieIcon className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Spending by Category</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">{currency}</span>
+          </div>
+          <div className="h-64">
+            {categoryData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No expenses yet</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
+                  >
+                    {categoryData.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => formatMoney(v, currency)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          {topCategory && (
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Top category</span>
+              <span className="font-semibold">
+                {topCategory.name} · {((topCategory.value / totalExpenseConverted) * 100).toFixed(0)}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Monthly Trend</h2>
+            <span className="text-xs text-muted-foreground">Last 6 months</span>
+          </div>
+          <div className="h-64">
+            {monthlyData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => formatMoney(v, currency)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="Income" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="glass-card rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
                 {["Date", "Type", "Category", "Description", "Amount", ""].map((h) => (
