@@ -328,15 +328,23 @@ export default function Trades() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={10} className="py-12 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!loading && trades.length === 0 && (
-                <tr><td colSpan={10} className="py-12 text-center text-muted-foreground">No trades yet. Click "New Trade" above.</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-muted-foreground">No trades yet. Click "New Trade" above.</td></tr>
               )}
               {trades.map((t) => {
                 const isEdit = editingId === t.id;
+                const isSelected = selected.has(t.id);
                 return (
-                  <tr key={t.id} className="border-b border-border/40 hover:bg-secondary/30 transition-colors">
+                  <tr key={t.id} className={`border-b border-border/40 hover:bg-secondary/30 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(c) => toggleOne(t.id, !!c)}
+                        aria-label={`Select ${t.asset}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</td>
                     <td className="px-3 py-2 font-semibold">
                       {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : t.asset}
