@@ -388,7 +388,7 @@ export default function Trades() {
                         ) : (
                           <>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(t)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(t.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => requestDelete([t.id])}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </>
                         )}
                       </div>
