@@ -251,7 +251,8 @@ export default function Trades() {
               <Button type="submit" className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save Trade</Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Desktop full table */}
