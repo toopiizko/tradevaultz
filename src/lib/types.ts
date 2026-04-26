@@ -27,6 +27,26 @@ export type Expense = {
   updated_at: string;
 };
 
+export const POPULAR_ASSETS = [
+  "EURUSD",
+  "GBPUSD",
+  "USDJPY",
+  "AUDUSD",
+  "USDCAD",
+  "USDCHF",
+  "NZDUSD",
+  "XAUUSD",
+  "XAGUSD",
+  "USOIL",
+  "UKOIL",
+  "BTCUSD",
+  "ETHUSD",
+  "US30",
+  "NAS100",
+  "SPX500",
+  "GER40",
+];
+
 export const STRATEGIES = [
   "Breakout",
   "Trend Following",
