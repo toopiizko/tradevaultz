@@ -80,7 +80,7 @@ export default function CalendarPage() {
                 key={key}
                 onClick={() => data && setSelected(day)}
                 disabled={!data}
-                className={`aspect-square rounded-lg p-1.5 lg:p-2 text-left transition-all border ${
+                className={`min-h-[68px] lg:min-h-[96px] rounded-lg p-1.5 lg:p-2 text-left transition-all border flex flex-col ${
                   !inMonth ? "opacity-30" : ""
                 } ${
                   data
@@ -90,10 +90,31 @@ export default function CalendarPage() {
                     : "bg-secondary/30 border-border/30"
                 } ${isToday ? "ring-2 ring-primary/50" : ""}`}
               >
-                <div className="text-xs font-medium">{format(day, "d")}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] lg:text-xs font-medium">{format(day, "d")}</span>
+                  {data && data.trades.length > 1 && (
+                    <span className="text-[8px] lg:text-[9px] text-muted-foreground">×{data.trades.length}</span>
+                  )}
+                </div>
                 {data && (
-                  <div className={`text-[10px] lg:text-xs font-bold mt-1 ${data.pnl >= 0 ? "text-success" : "text-destructive"}`}>
-                    {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(0)}
+                  <div className="mt-auto space-y-0.5 overflow-hidden">
+                    {data.trades.slice(0, 2).map((t) => {
+                      const p = Number(t.pnl);
+                      return (
+                        <div key={t.id} className="flex items-center justify-between gap-1 leading-tight">
+                          <span className="text-[8px] lg:text-[10px] font-semibold truncate">{t.asset}</span>
+                          <span className={`text-[8px] lg:text-[10px] font-bold tabular-nums shrink-0 ${p >= 0 ? "text-success" : "text-destructive"}`}>
+                            {p >= 0 ? "+" : ""}{p.toFixed(0)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {data.trades.length > 2 && (
+                      <div className="text-[8px] lg:text-[9px] text-muted-foreground text-right">+{data.trades.length - 2} more</div>
+                    )}
+                    <div className={`text-[9px] lg:text-[11px] font-bold text-right border-t border-border/30 pt-0.5 ${data.pnl >= 0 ? "text-success" : "text-destructive"}`}>
+                      {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(0)}
+                    </div>
                   </div>
                 )}
               </button>

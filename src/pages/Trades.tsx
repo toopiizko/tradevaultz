@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTrades } from "@/hooks/useTrades";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Trade, STRATEGIES, EMOTIONS, POPULAR_ASSETS } from "@/lib/types";
+import { parseTradesFile, exportTradesToExcel } from "@/lib/tradeIO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -22,6 +23,8 @@ export default function Trades() {
   const [editDraft, setEditDraft] = useState<Partial<Trade>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const [form, setForm] = useState({
     asset: "",
@@ -78,6 +81,36 @@ export default function Trades() {
     toast.success("Trade deleted");
   };
 
+  const handleExport = () => {
+    if (!trades.length) return toast.error("No trades to export");
+    exportTradesToExcel(trades);
+    toast.success(`Exported ${trades.length} trades`);
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    setImporting(true);
+    try {
+      const rows = await parseTradesFile(file);
+      if (!rows.length) {
+        toast.error("No valid trades found in file");
+        return;
+      }
+      const payload = rows.map((r) => ({ ...r, user_id: user.id }));
+      const { error } = await supabase.from("trades").insert(payload);
+      if (error) throw error;
+      toast.success(`Imported ${rows.length} trades`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to import file");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const startEdit = (t: Trade) => {
     setEditingId(t.id);
     setEditDraft({ ...t });
@@ -106,15 +139,29 @@ export default function Trades() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Trade Log</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Trade History</h1>
           <p className="text-muted-foreground mt-1 text-sm">{trades.length} trades recorded</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 font-semibold hidden lg:inline-flex" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
-              <Plus className="h-4 w-4" /> New Trade
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="outline" size="sm" onClick={handleImportClick} disabled={importing} className="gap-2">
+            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 font-semibold hidden lg:inline-flex" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                <Plus className="h-4 w-4" /> New Trade
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Log New Trade</DialogTitle></DialogHeader>
             <form onSubmit={handleAdd} className="space-y-3">
@@ -204,7 +251,8 @@ export default function Trades() {
               <Button type="submit" className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save Trade</Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Desktop full table */}
