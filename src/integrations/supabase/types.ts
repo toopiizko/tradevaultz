@@ -14,7 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          expense_date: string
+          id: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trades: {
+        Row: {
+          asset: string
+          created_at: string
+          emotion: string | null
+          entry_price: number
+          exit_price: number
+          id: string
+          note: string | null
+          pnl: number
+          side: string
+          strategy: string | null
+          trade_date: string
+          updated_at: string
+          user_id: string
+          volume: number
+        }
+        Insert: {
+          asset: string
+          created_at?: string
+          emotion?: string | null
+          entry_price: number
+          exit_price: number
+          id?: string
+          note?: string | null
+          pnl?: number
+          side?: string
+          strategy?: string | null
+          trade_date?: string
+          updated_at?: string
+          user_id: string
+          volume: number
+        }
+        Update: {
+          asset?: string
+          created_at?: string
+          emotion?: string | null
+          entry_price?: number
+          exit_price?: number
+          id?: string
+          note?: string | null
+          pnl?: number
+          side?: string
+          strategy?: string | null
+          trade_date?: string
+          updated_at?: string
+          user_id?: string
+          volume?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
