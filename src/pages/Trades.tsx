@@ -81,6 +81,36 @@ export default function Trades() {
     toast.success("Trade deleted");
   };
 
+  const handleExport = () => {
+    if (!trades.length) return toast.error("No trades to export");
+    exportTradesToExcel(trades);
+    toast.success(`Exported ${trades.length} trades`);
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    setImporting(true);
+    try {
+      const rows = await parseTradesFile(file);
+      if (!rows.length) {
+        toast.error("No valid trades found in file");
+        return;
+      }
+      const payload = rows.map((r) => ({ ...r, user_id: user.id }));
+      const { error } = await supabase.from("trades").insert(payload);
+      if (error) throw error;
+      toast.success(`Imported ${rows.length} trades`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to import file");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const startEdit = (t: Trade) => {
     setEditingId(t.id);
     setEditDraft({ ...t });
