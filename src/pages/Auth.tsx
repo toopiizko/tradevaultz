@@ -49,7 +49,7 @@ export default function Auth() {
           <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
             <TrendingUp className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Trader's Ledger</h1>
+          <h1 className="text-2xl font-bold tracking-tight">TradeVaultz</h1>
           <p className="text-sm text-muted-foreground">Professional trading journal & finance tracker</p>
         </div>
 
