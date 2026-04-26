@@ -293,12 +293,34 @@ export default function Trades() {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="glass-card rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="text-sm font-medium">
+            {selected.size} selected
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => requestDelete(Array.from(selected))}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop full table */}
       <div className="glass-card rounded-xl overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
+                <th className="px-3 py-2.5 w-10">
+                  <Checkbox
+                    checked={trades.length > 0 && selected.size === trades.length}
+                    onCheckedChange={(c) => toggleAll(!!c)}
+                    aria-label="Select all"
+                  />
+                </th>
                 {["Date", "Asset", "Side", "Entry", "Exit", "Vol", "Strategy", "🎭", "P&L", ""].map((h) => (
                   <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
                 ))}
