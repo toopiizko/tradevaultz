@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useTrades } from "@/hooks/useTrades";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Trade, STRATEGIES, EMOTIONS } from "@/lib/types";
+import { Trade, STRATEGIES, EMOTIONS, POPULAR_ASSETS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,9 +119,27 @@ export default function Trades() {
             <DialogHeader><DialogTitle>Log New Trade</DialogTitle></DialogHeader>
             <form onSubmit={handleAdd} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="col-span-2">
                   <Label>Asset</Label>
-                  <Input required value={form.asset} onChange={(e) => setForm({ ...form, asset: e.target.value })} placeholder="EURUSD" />
+                  <div className="flex gap-2">
+                    <Select
+                      value={POPULAR_ASSETS.includes(form.asset.toUpperCase()) ? form.asset.toUpperCase() : "__custom"}
+                      onValueChange={(v) => setForm({ ...form, asset: v === "__custom" ? "" : v })}
+                    >
+                      <SelectTrigger className="w-40"><SelectValue placeholder="Pick" /></SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {POPULAR_ASSETS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                        <SelectItem value="__custom">Custom…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      required
+                      value={form.asset}
+                      onChange={(e) => setForm({ ...form, asset: e.target.value.toUpperCase() })}
+                      placeholder="Type symbol (e.g. EURUSD)"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Side</Label>
