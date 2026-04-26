@@ -139,15 +139,29 @@ export default function Trades() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Trade Log</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Trade History</h1>
           <p className="text-muted-foreground mt-1 text-sm">{trades.length} trades recorded</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 font-semibold hidden lg:inline-flex" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
-              <Plus className="h-4 w-4" /> New Trade
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="outline" size="sm" onClick={handleImportClick} disabled={importing} className="gap-2">
+            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 font-semibold hidden lg:inline-flex" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                <Plus className="h-4 w-4" /> New Trade
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Log New Trade</DialogTitle></DialogHeader>
             <form onSubmit={handleAdd} className="space-y-3">
