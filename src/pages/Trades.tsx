@@ -403,7 +403,12 @@ export default function Trades() {
 
       {/* Mobile compact list — Asset / Volume / P&L; tap row to expand */}
       <div className="md:hidden glass-card rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-2.5 bg-secondary/40 border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-3 py-2.5 bg-secondary/40 border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground font-medium items-center">
+          <Checkbox
+            checked={trades.length > 0 && selected.size === trades.length}
+            onCheckedChange={(c) => toggleAll(!!c)}
+            aria-label="Select all"
+          />
           <span>Asset</span>
           <span className="text-right">Vol</span>
           <span className="text-right">P&L</span>
@@ -415,24 +420,33 @@ export default function Trades() {
         {trades.map((t) => {
           const isOpen = expandedId === t.id;
           const pnlNum = Number(t.pnl);
+          const isSelected = selected.has(t.id);
           return (
-            <div key={t.id} className="border-b border-border/40 last:border-b-0">
-              <button
-                onClick={() => setExpandedId(isOpen ? null : t.id)}
-                className="w-full grid grid-cols-[1fr_auto_auto] gap-3 items-center px-3 py-3 text-left hover:bg-secondary/30 transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
+            <div key={t.id} className={`border-b border-border/40 last:border-b-0 ${isSelected ? "bg-primary/5" : ""}`}>
+              <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 items-center px-3 py-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(c) => toggleOne(t.id, !!c)}
+                  aria-label={`Select ${t.asset}`}
+                />
+                <button
+                  onClick={() => setExpandedId(isOpen ? null : t.id)}
+                  className="flex items-center gap-2 min-w-0 text-left"
+                >
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">{t.asset}</div>
                     <div className="text-[10px] text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</div>
                   </div>
-                </div>
-                <span className="text-sm tabular-nums text-right">{Number(t.volume)}</span>
-                <span className={`font-bold tabular-nums text-right text-sm ${pnlNum >= 0 ? "text-success" : "text-destructive"}`}>
+                </button>
+                <span className="text-sm tabular-nums text-right" onClick={() => setExpandedId(isOpen ? null : t.id)}>{Number(t.volume)}</span>
+                <span
+                  className={`font-bold tabular-nums text-right text-sm ${pnlNum >= 0 ? "text-success" : "text-destructive"}`}
+                  onClick={() => setExpandedId(isOpen ? null : t.id)}
+                >
                   {pnlNum >= 0 ? "+" : ""}{pnlNum.toFixed(2)}
                 </span>
-              </button>
+              </div>
 
               {isOpen && (
                 <div className="px-3 pb-3 pt-1 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs bg-secondary/20">
