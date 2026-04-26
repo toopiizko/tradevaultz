@@ -300,6 +300,8 @@ export default function Expenses() {
       </div>
 
       <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
                 {["Date", "Type", "Category", "Description", "Amount", ""].map((h) => (
