@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { PortfolioSwitcher } from "@/components/PortfolioSwitcher";
 import { useState } from "react";
 
 const primaryNav = [
@@ -77,6 +78,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+
+        <div className="px-3 pt-3">
+          <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">Portfolio</p>
+          <PortfolioSwitcher />
+        </div>
+
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Main</p>
           {primaryNav.map((item) => <NavItem key={item.to} {...item} />)}
@@ -93,14 +100,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center justify-between px-4 bg-background/80 backdrop-blur-xl border-b border-border/60">
-        <div className="flex items-center gap-2">
+      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center justify-between px-3 gap-2 bg-background/80 backdrop-blur-xl border-b border-border/60">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <TrendingUp className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sm">TradeVaultz</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex-1 min-w-0 flex justify-center">
+          <PortfolioSwitcher compact />
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
