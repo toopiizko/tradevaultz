@@ -186,6 +186,70 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <div className="glass-card rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold">Asset Allocation</h2>
+            <p className="text-xs text-muted-foreground">Trade distribution & win rate per asset</p>
+          </div>
+        </div>
+        {assetData.length === 0 ? (
+          <div className="h-72 flex items-center justify-center text-muted-foreground text-sm">No data</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={assetData}
+                    dataKey="count"
+                    nameKey="asset"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={45}
+                    paddingAngle={2}
+                    label={(e: any) => `${e.asset} ${e.pct}%`}
+                    labelLine={false}
+                    fontSize={11}
+                  >
+                    {assetData.map((_, i) => (
+                      <Cell key={i} fill={ASSET_COLORS[i % ASSET_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(value: any, _name: any, p: any) => [`${value} trades (${p.payload.pct}%)`, p.payload.asset]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {assetData.map((a, i) => (
+                <div key={a.asset} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border/40">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: ASSET_COLORS[i % ASSET_COLORS.length] }} />
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{a.asset}</p>
+                      <p className="text-[11px] text-muted-foreground">{a.count} trades · {a.pct}%</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-sm font-semibold ${a.winRate >= 50 ? "text-success" : "text-destructive"}`}>
+                      {a.winRate}% WR
+                    </p>
+                    <p className={`text-[11px] ${a.pnl >= 0 ? "text-success" : "text-destructive"}`}>
+                      ${a.pnl.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
