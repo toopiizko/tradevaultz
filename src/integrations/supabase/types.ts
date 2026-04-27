@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolios: {
+        Row: {
+          color: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          initial_balance: number
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          initial_balance?: number
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          initial_balance?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           asset: string
@@ -60,6 +96,7 @@ export type Database = {
           id: string
           note: string | null
           pnl: number
+          portfolio_id: string | null
           side: string
           strategy: string | null
           trade_date: string
@@ -76,6 +113,7 @@ export type Database = {
           id?: string
           note?: string | null
           pnl?: number
+          portfolio_id?: string | null
           side?: string
           strategy?: string | null
           trade_date?: string
@@ -92,6 +130,7 @@ export type Database = {
           id?: string
           note?: string | null
           pnl?: number
+          portfolio_id?: string | null
           side?: string
           strategy?: string | null
           trade_date?: string
@@ -99,7 +138,15 @@ export type Database = {
           user_id?: string
           volume?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trades_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
