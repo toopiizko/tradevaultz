@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const primaryNav = [
 
 const secondaryNav = [
   { to: "/calendar", label: "P&L Calendar", icon: Calendar },
+  { to: "/portfolios", label: "Portfolios", icon: Briefcase },
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 

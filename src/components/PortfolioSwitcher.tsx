@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Briefcase, Plus, Pencil, Trash2, Check, ChevronsUpDown, Layers } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Briefcase, Plus, Pencil, Trash2, Check, ChevronsUpDown, Layers, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { usePortfolio, ALL_PORTFOLIOS, Portfolio } from "@/lib/portfolio";
@@ -115,7 +116,7 @@ function PortfolioForm({
 
 export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
-  const { portfolios, activeId, setActiveId, activePortfolio } = usePortfolio();
+  const { portfolios, activeId, setActiveId, activePortfolio, refresh } = usePortfolio();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Portfolio | null>(null);
@@ -133,6 +134,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success(`Portfolio "${data.name}" created`);
+    await refresh();
     if (created) setActiveId((created as Portfolio).id);
     setCreateOpen(false);
   };
@@ -144,6 +146,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success("Portfolio updated");
+    await refresh();
     setEditing(null);
   };
 
@@ -155,6 +158,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     if (error) return toast.error(error.message);
     toast.success(`Deleted "${confirmDel.name}"`);
     if (activeId === confirmDel.id) setActiveId(ALL_PORTFOLIOS);
+    await refresh();
     setConfirmDel(null);
   };
 
@@ -234,7 +238,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
             ))}
           </div>
 
-          <div className="p-2 border-t border-border/60">
+          <div className="p-2 border-t border-border/60 space-y-1">
             <Button
               size="sm"
               variant="ghost"
@@ -242,6 +246,15 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
               onClick={() => { setCreateOpen(true); setPopoverOpen(false); }}
             >
               <Plus className="h-4 w-4" /> New Portfolio
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              asChild
+              onClick={() => setPopoverOpen(false)}
+            >
+              <Link to="/portfolios"><Settings className="h-4 w-4" /> Manage portfolios</Link>
             </Button>
           </div>
         </PopoverContent>

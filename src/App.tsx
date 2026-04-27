@@ -14,6 +14,7 @@ import CalendarPage from "./pages/CalendarPage";
 import Calculator from "./pages/Calculator";
 import Expenses from "./pages/Expenses";
 import News from "./pages/News";
+import Portfolios from "./pages/Portfolios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/calculator" element={<Protected><Calculator /></Protected>} />
                 <Route path="/expenses" element={<Protected><Expenses /></Protected>} />
                 <Route path="/news" element={<Protected><News /></Protected>} />
+                <Route path="/portfolios" element={<Protected><Portfolios /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </PortfolioProvider>
