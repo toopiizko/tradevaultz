@@ -1,6 +1,7 @@
 export type Trade = {
   id: string;
   user_id: string;
+  portfolio_id: string | null;
   asset: string;
   side: "buy" | "sell";
   entry_price: number;
