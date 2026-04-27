@@ -69,6 +69,9 @@ export default function Trades() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!form.portfolio_id) {
+      return toast.error("Please select a portfolio (or create one first)");
+    }
     const entry = parseFloat(form.entry_price);
     const exit = parseFloat(form.exit_price);
     const vol = parseFloat(form.volume);
@@ -76,6 +79,7 @@ export default function Trades() {
     if (Number.isNaN(pnl)) return toast.error("Please enter P&L");
     const { error } = await supabase.from("trades").insert({
       user_id: user.id,
+      portfolio_id: form.portfolio_id,
       asset: form.asset.toUpperCase(),
       side: form.side,
       entry_price: entry,
@@ -151,10 +155,18 @@ export default function Trades() {
         toast.error("No valid trades found in file");
         return;
       }
-      const payload = rows.map((r) => ({ ...r, user_id: user.id }));
+      // Import goes into the active portfolio if one is selected;
+      // otherwise into the first portfolio, or as unassigned.
+      const targetPortfolioId =
+        activeId !== ALL_PORTFOLIOS ? activeId : portfolios[0]?.id ?? null;
+      if (!targetPortfolioId) {
+        toast.error("Create a portfolio first, then import trades into it");
+        return;
+      }
+      const payload = rows.map((r) => ({ ...r, user_id: user.id, portfolio_id: targetPortfolioId }));
       const { error } = await supabase.from("trades").insert(payload);
       if (error) throw error;
-      toast.success(`Imported ${rows.length} trades`);
+      toast.success(`Imported ${rows.length} trades into "${activePortfolio?.name ?? portfolios[0]?.name}"`);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to import file");
     } finally {
