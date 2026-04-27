@@ -115,7 +115,7 @@ function PortfolioForm({
 
 export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
-  const { portfolios, activeId, setActiveId, activePortfolio } = usePortfolio();
+  const { portfolios, activeId, setActiveId, activePortfolio, refresh } = usePortfolio();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Portfolio | null>(null);
@@ -133,6 +133,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success(`Portfolio "${data.name}" created`);
+    await refresh();
     if (created) setActiveId((created as Portfolio).id);
     setCreateOpen(false);
   };
@@ -144,6 +145,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success("Portfolio updated");
+    await refresh();
     setEditing(null);
   };
 
@@ -155,6 +157,7 @@ export function PortfolioSwitcher({ compact = false }: { compact?: boolean }) {
     if (error) return toast.error(error.message);
     toast.success(`Deleted "${confirmDel.name}"`);
     if (activeId === confirmDel.id) setActiveId(ALL_PORTFOLIOS);
+    await refresh();
     setConfirmDel(null);
   };
 
