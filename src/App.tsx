@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
+import { PortfolioProvider } from "@/lib/portfolio";
 import Protected from "@/components/Protected";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -25,16 +26,18 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<Protected><Index /></Protected>} />
-              <Route path="/trades" element={<Protected><Trades /></Protected>} />
-              <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
-              <Route path="/calculator" element={<Protected><Calculator /></Protected>} />
-              <Route path="/expenses" element={<Protected><Expenses /></Protected>} />
-              <Route path="/news" element={<Protected><News /></Protected>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <PortfolioProvider>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Protected><Index /></Protected>} />
+                <Route path="/trades" element={<Protected><Trades /></Protected>} />
+                <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
+                <Route path="/calculator" element={<Protected><Calculator /></Protected>} />
+                <Route path="/expenses" element={<Protected><Expenses /></Protected>} />
+                <Route path="/news" element={<Protected><News /></Protected>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </PortfolioProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

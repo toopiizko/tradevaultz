@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useTrades } from "@/hooks/useTrades";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePortfolio, ALL_PORTFOLIOS } from "@/lib/portfolio";
 import { Trade, STRATEGIES, EMOTIONS, POPULAR_ASSETS } from "@/lib/types";
 import { parseTradesFile, exportTradesToExcel } from "@/lib/tradeIO";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { format } from "date-fns";
 
 export default function Trades() {
   const { user } = useAuth();
+  const { portfolios, activeId, activePortfolio } = usePortfolio();
   const { trades, loading, refresh } = useTrades();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,7 +44,18 @@ export default function Trades() {
     emotion: EMOTIONS[0].value,
     note: "",
     trade_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    portfolio_id: "" as string,
   });
+
+  // Default the form's portfolio to the active one (or first available)
+  useEffect(() => {
+    if (form.portfolio_id) return;
+    if (activeId !== ALL_PORTFOLIOS) {
+      setForm((f) => ({ ...f, portfolio_id: activeId }));
+    } else if (portfolios.length === 1) {
+      setForm((f) => ({ ...f, portfolio_id: portfolios[0].id }));
+    }
+  }, [activeId, portfolios, form.portfolio_id]);
 
   // Open dialog when ?new=1 (from bottom-bar FAB)
   useEffect(() => {
@@ -56,6 +69,9 @@ export default function Trades() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!form.portfolio_id) {
+      return toast.error("Please select a portfolio (or create one first)");
+    }
     const entry = parseFloat(form.entry_price);
     const exit = parseFloat(form.exit_price);
     const vol = parseFloat(form.volume);
@@ -63,6 +79,7 @@ export default function Trades() {
     if (Number.isNaN(pnl)) return toast.error("Please enter P&L");
     const { error } = await supabase.from("trades").insert({
       user_id: user.id,
+      portfolio_id: form.portfolio_id,
       asset: form.asset.toUpperCase(),
       side: form.side,
       entry_price: entry,
@@ -138,10 +155,18 @@ export default function Trades() {
         toast.error("No valid trades found in file");
         return;
       }
-      const payload = rows.map((r) => ({ ...r, user_id: user.id }));
+      // Import goes into the active portfolio if one is selected;
+      // otherwise into the first portfolio, or as unassigned.
+      const targetPortfolioId =
+        activeId !== ALL_PORTFOLIOS ? activeId : portfolios[0]?.id ?? null;
+      if (!targetPortfolioId) {
+        toast.error("Create a portfolio first, then import trades into it");
+        return;
+      }
+      const payload = rows.map((r) => ({ ...r, user_id: user.id, portfolio_id: targetPortfolioId }));
       const { error } = await supabase.from("trades").insert(payload);
       if (error) throw error;
-      toast.success(`Imported ${rows.length} trades`);
+      toast.success(`Imported ${rows.length} trades into "${activePortfolio?.name ?? portfolios[0]?.name}"`);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to import file");
     } finally {
@@ -204,6 +229,31 @@ export default function Trades() {
             <DialogHeader><DialogTitle>Log New Trade</DialogTitle></DialogHeader>
             <form onSubmit={handleAdd} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Portfolio</Label>
+                  {portfolios.length === 0 ? (
+                    <p className="text-xs text-destructive py-2">
+                      No portfolios yet. Create one from the portfolio menu in the top bar.
+                    </p>
+                  ) : (
+                    <Select
+                      value={form.portfolio_id || undefined}
+                      onValueChange={(v) => setForm({ ...form, portfolio_id: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select portfolio" /></SelectTrigger>
+                      <SelectContent>
+                        {portfolios.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                              {p.name} <span className="text-xs text-muted-foreground">({p.currency})</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
                 <div className="col-span-2">
                   <Label>Asset</Label>
                   <div className="flex gap-2">
