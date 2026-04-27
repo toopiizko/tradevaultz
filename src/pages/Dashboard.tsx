@@ -60,6 +60,40 @@ export default function Dashboard() {
     return Array.from(map.values()).map((s) => ({ ...s, pnl: Number(s.pnl.toFixed(2)), winRate: Math.round((s.wins / s.count) * 100) }));
   }, [trades]);
 
+  const assetData = useMemo(() => {
+    const map = new Map<string, { asset: string; count: number; wins: number; pnl: number }>();
+    trades.forEach((t) => {
+      const k = t.asset || "Unknown";
+      const cur = map.get(k) || { asset: k, count: 0, wins: 0, pnl: 0 };
+      cur.count += 1;
+      cur.pnl += Number(t.pnl);
+      if (Number(t.pnl) > 0) cur.wins += 1;
+      map.set(k, cur);
+    });
+    const total = trades.length || 1;
+    return Array.from(map.values())
+      .map((a) => ({
+        ...a,
+        pct: Number(((a.count / total) * 100).toFixed(1)),
+        winRate: Math.round((a.wins / a.count) * 100),
+        pnl: Number(a.pnl.toFixed(2)),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [trades]);
+
+  const ASSET_COLORS = [
+    "hsl(var(--primary))",
+    "hsl(var(--success))",
+    "hsl(var(--destructive))",
+    "hsl(var(--accent))",
+    "hsl(220 70% 60%)",
+    "hsl(280 65% 60%)",
+    "hsl(35 90% 55%)",
+    "hsl(160 60% 50%)",
+    "hsl(330 70% 60%)",
+    "hsl(200 80% 55%)",
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
