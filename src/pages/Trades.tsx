@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useTrades } from "@/hooks/useTrades";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePortfolio, ALL_PORTFOLIOS } from "@/lib/portfolio";
 import { Trade, STRATEGIES, EMOTIONS, POPULAR_ASSETS } from "@/lib/types";
 import { parseTradesFile, exportTradesToExcel } from "@/lib/tradeIO";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { format } from "date-fns";
 
 export default function Trades() {
   const { user } = useAuth();
+  const { portfolios, activeId, activePortfolio } = usePortfolio();
   const { trades, loading, refresh } = useTrades();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,7 +44,18 @@ export default function Trades() {
     emotion: EMOTIONS[0].value,
     note: "",
     trade_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    portfolio_id: "" as string,
   });
+
+  // Default the form's portfolio to the active one (or first available)
+  useEffect(() => {
+    if (form.portfolio_id) return;
+    if (activeId !== ALL_PORTFOLIOS) {
+      setForm((f) => ({ ...f, portfolio_id: activeId }));
+    } else if (portfolios.length === 1) {
+      setForm((f) => ({ ...f, portfolio_id: portfolios[0].id }));
+    }
+  }, [activeId, portfolios, form.portfolio_id]);
 
   // Open dialog when ?new=1 (from bottom-bar FAB)
   useEffect(() => {
