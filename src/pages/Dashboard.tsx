@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTrades } from "@/hooks/useTrades";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Target, DollarSign, Activity } from "lucide-react";
 import { format } from "date-fns";
 
