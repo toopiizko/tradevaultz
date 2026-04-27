@@ -230,6 +230,31 @@ export default function Trades() {
             <form onSubmit={handleAdd} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
+                  <Label>Portfolio</Label>
+                  {portfolios.length === 0 ? (
+                    <p className="text-xs text-destructive py-2">
+                      No portfolios yet. Create one from the portfolio menu in the top bar.
+                    </p>
+                  ) : (
+                    <Select
+                      value={form.portfolio_id || undefined}
+                      onValueChange={(v) => setForm({ ...form, portfolio_id: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select portfolio" /></SelectTrigger>
+                      <SelectContent>
+                        {portfolios.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                              {p.name} <span className="text-xs text-muted-foreground">({p.currency})</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="col-span-2">
                   <Label>Asset</Label>
                   <div className="flex gap-2">
                     <Select
