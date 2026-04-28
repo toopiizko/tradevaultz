@@ -47,6 +47,15 @@ export default function Expenses() {
     getUsdThbRate().then(setRate);
   }, []);
 
+  // Import state
+  const [importing, setImporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Array<{
+    type: "income" | "expense"; amount: number; category: string; description: string; expense_date: string; _selected: boolean;
+  }>>([]);
+  const [importFileName, setImportFileName] = useState("");
+  const ALL_CATS = [...EXPENSE_CATEGORIES.income, ...EXPENSE_CATEGORIES.expense];
+
   const totals = useMemo(() => {
     const income = expenses.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
     const expense = expenses.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
