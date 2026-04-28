@@ -129,6 +129,76 @@ export default function Expenses() {
     toast.success("Deleted");
   };
 
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setImporting(true);
+      toast.info("Reading file…");
+      const text = await extractStatementText(file);
+      if (!text.trim()) throw new Error("Could not read file content");
+
+      toast.info("AI analyzing statement…");
+      const { data, error } = await supabase.functions.invoke("analyze-statement", {
+        body: { text, currencyHint: currency },
+      });
+      if (error) throw error;
+      const txns = (data?.transactions ?? []) as Array<any>;
+      if (!txns.length) {
+        toast.warning("No transactions detected");
+        setImporting(false);
+        return;
+      }
+      setImportRows(txns.map((t) => ({
+        type: t.type === "income" ? "income" : "expense",
+        amount: Number(t.amount) || 0,
+        category: t.category || "Other",
+        description: String(t.description || ""),
+        expense_date: String(t.expense_date || format(new Date(), "yyyy-MM-dd")).slice(0, 10),
+        _selected: true,
+      })));
+      setImportFileName(file.name);
+      setImportOpen(true);
+      toast.success(`Found ${txns.length} transactions`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to analyze statement");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportSave = async () => {
+    if (!user) return;
+    const picked = importRows.filter((r) => r._selected);
+    if (!picked.length) return toast.error("Nothing selected");
+    const rows = picked.map((r) => {
+      // treat amount as already in the selected currency; store as USD
+      const amountUsd = currency === "THB" ? r.amount / rate : r.amount;
+      return {
+        user_id: user.id,
+        type: r.type,
+        amount: amountUsd,
+        category: r.category,
+        description: r.description || null,
+        expense_date: new Date(r.expense_date).toISOString(),
+      };
+    });
+    const { error } = await supabase.from("expenses").insert(rows);
+    if (error) return toast.error(error.message);
+    toast.success(`Imported ${rows.length} transactions`);
+    setImportOpen(false);
+    setImportRows([]);
+  };
+
+  const handleExport = () => {
+    if (!expenses.length) return toast.error("Nothing to export");
+    exportExpensesToExcel(expenses as any);
+    toast.success("Exported");
+  };
+
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between flex-wrap gap-3">
