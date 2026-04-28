@@ -251,7 +251,7 @@ export default function Expenses() {
               <form onSubmit={handleAdd} className="space-y-3">
                 <div>
                   <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: EXPENSE_CATEGORIES[v][0] })}>
+                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: categories[v][0] })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="income">Income</SelectItem>
@@ -286,7 +286,7 @@ export default function Expenses() {
                   <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {EXPENSE_CATEGORIES[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {categories[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -350,7 +350,7 @@ export default function Expenses() {
                           <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
                             <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              {EXPENSE_CATEGORIES[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              {categories[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </td>
