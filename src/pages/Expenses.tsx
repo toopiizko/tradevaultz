@@ -220,6 +220,23 @@ export default function Expenses() {
               </button>
             ))}
           </div>
+          <label className="relative">
+            <input
+              type="file"
+              accept=".pdf,.xlsx,.xls,.csv"
+              onChange={handleFilePick}
+              disabled={importing}
+              className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-wait"
+            />
+            <Button variant="outline" className="gap-2 pointer-events-none" disabled={importing}>
+              {importing ? <Sparkles className="h-4 w-4 animate-pulse" /> : <Upload className="h-4 w-4" />}
+              <span className="hidden sm:inline">{importing ? "Analyzing…" : "Import"}</span>
+            </Button>
+          </label>
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export</span>
+          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
