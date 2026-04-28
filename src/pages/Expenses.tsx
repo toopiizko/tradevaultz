@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon } from "lucide-react";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon, Upload, Download, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
+import { extractStatementText, exportExpensesToExcel } from "@/lib/statementIO";
+import { Textarea } from "@/components/ui/textarea";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const CHART_COLORS = [
