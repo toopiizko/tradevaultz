@@ -13,6 +13,7 @@ import Trades from "./pages/Trades";
 import CalendarPage from "./pages/CalendarPage";
 import Calculator from "./pages/Calculator";
 import Expenses from "./pages/Expenses";
+import ExpenseCalendar from "./pages/ExpenseCalendar";
 import News from "./pages/News";
 import Portfolios from "./pages/Portfolios";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/calendar" element={<Protected><CalendarPage /></Protected>} />
                 <Route path="/calculator" element={<Protected><Calculator /></Protected>} />
                 <Route path="/expenses" element={<Protected><Expenses /></Protected>} />
+                <Route path="/expenses/calendar" element={<Protected><ExpenseCalendar /></Protected>} />
                 <Route path="/news" element={<Protected><News /></Protected>} />
                 <Route path="/portfolios" element={<Protected><Portfolios /></Protected>} />
                 <Route path="*" element={<NotFound />} />

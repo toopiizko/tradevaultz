@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon } from "lucide-react";
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon, Upload, Download, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
+import { extractStatementText, exportExpensesToExcel } from "@/lib/statementIO";
+import { Textarea } from "@/components/ui/textarea";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const CHART_COLORS = [
@@ -44,6 +46,15 @@ export default function Expenses() {
   useEffect(() => {
     getUsdThbRate().then(setRate);
   }, []);
+
+  // Import state
+  const [importing, setImporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Array<{
+    type: "income" | "expense"; amount: number; category: string; description: string; expense_date: string; _selected: boolean;
+  }>>([]);
+  const [importFileName, setImportFileName] = useState("");
+  const ALL_CATS = [...EXPENSE_CATEGORIES.income, ...EXPENSE_CATEGORIES.expense];
 
   const totals = useMemo(() => {
     const income = expenses.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
@@ -118,6 +129,76 @@ export default function Expenses() {
     toast.success("Deleted");
   };
 
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setImporting(true);
+      toast.info("Reading file…");
+      const text = await extractStatementText(file);
+      if (!text.trim()) throw new Error("Could not read file content");
+
+      toast.info("AI analyzing statement…");
+      const { data, error } = await supabase.functions.invoke("analyze-statement", {
+        body: { text, currencyHint: currency },
+      });
+      if (error) throw error;
+      const txns = (data?.transactions ?? []) as Array<any>;
+      if (!txns.length) {
+        toast.warning("No transactions detected");
+        setImporting(false);
+        return;
+      }
+      setImportRows(txns.map((t) => ({
+        type: t.type === "income" ? "income" : "expense",
+        amount: Number(t.amount) || 0,
+        category: t.category || "Other",
+        description: String(t.description || ""),
+        expense_date: String(t.expense_date || format(new Date(), "yyyy-MM-dd")).slice(0, 10),
+        _selected: true,
+      })));
+      setImportFileName(file.name);
+      setImportOpen(true);
+      toast.success(`Found ${txns.length} transactions`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to analyze statement");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportSave = async () => {
+    if (!user) return;
+    const picked = importRows.filter((r) => r._selected);
+    if (!picked.length) return toast.error("Nothing selected");
+    const rows = picked.map((r) => {
+      // treat amount as already in the selected currency; store as USD
+      const amountUsd = currency === "THB" ? r.amount / rate : r.amount;
+      return {
+        user_id: user.id,
+        type: r.type,
+        amount: amountUsd,
+        category: r.category,
+        description: r.description || null,
+        expense_date: new Date(r.expense_date).toISOString(),
+      };
+    });
+    const { error } = await supabase.from("expenses").insert(rows);
+    if (error) return toast.error(error.message);
+    toast.success(`Imported ${rows.length} transactions`);
+    setImportOpen(false);
+    setImportRows([]);
+  };
+
+  const handleExport = () => {
+    if (!expenses.length) return toast.error("Nothing to export");
+    exportExpensesToExcel(expenses as any);
+    toast.success("Exported");
+  };
+
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -139,6 +220,23 @@ export default function Expenses() {
               </button>
             ))}
           </div>
+          <label className="relative">
+            <input
+              type="file"
+              accept=".pdf,.xlsx,.xls,.csv"
+              onChange={handleFilePick}
+              disabled={importing}
+              className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-wait"
+            />
+            <Button variant="outline" className="gap-2 pointer-events-none" disabled={importing}>
+              {importing ? <Sparkles className="h-4 w-4 animate-pulse" /> : <Upload className="h-4 w-4" />}
+              <span className="hidden sm:inline">{importing ? "Analyzing…" : "Import"}</span>
+            </Button>
+          </label>
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export</span>
+          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
@@ -197,6 +295,97 @@ export default function Expenses() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Import preview dialog */}
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Review imported transactions
+                </DialogTitle>
+              </DialogHeader>
+              <p className="text-xs text-muted-foreground">
+                {importFileName} · {importRows.filter((r) => r._selected).length} of {importRows.length} selected · amounts in {currency}
+              </p>
+              <div className="max-h-[55vh] overflow-auto border border-border/40 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50 sticky top-0">
+                    <tr className="text-left">
+                      {["", "Date", "Type", "Category", "Description", "Amount"].map((h) => (
+                        <th key={h} className="px-2 py-2 font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.map((r, i) => (
+                      <tr key={i} className="border-t border-border/30">
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="checkbox"
+                            checked={r._selected}
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, _selected: e.target.checked } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            type="date"
+                            value={r.expense_date}
+                            className="h-7 text-xs"
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, expense_date: e.target.value } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Select value={r.type} onValueChange={(v: "income" | "expense") => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, type: v } : x))}>
+                            <SelectTrigger className="h-7 text-xs w-[90px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="income">Income</SelectItem>
+                              <SelectItem value="expense">Expense</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
+                            <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {EXPENSE_CATEGORIES[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            value={r.description}
+                            className="h-7 text-xs"
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={r.amount}
+                            className={`h-7 text-xs w-[90px] font-semibold ${r.type === "income" ? "text-success" : "text-destructive"}`}
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <div className="flex gap-2 text-xs">
+                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: true })))}>Select all</button>
+                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: false })))}>Clear</button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
+                  <Button onClick={handleImportSave} className="gap-2" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                    Import {importRows.filter((r) => r._selected).length}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -247,6 +436,8 @@ export default function Expenses() {
                     innerRadius={50}
                     outerRadius={90}
                     paddingAngle={2}
+                    stroke="hsl(var(--card))"
+                    strokeWidth={2}
                   >
                     {categoryData.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />

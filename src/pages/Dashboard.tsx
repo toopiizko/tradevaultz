@@ -210,6 +210,8 @@ export default function Dashboard() {
                     outerRadius={90}
                     innerRadius={45}
                     paddingAngle={2}
+                    stroke="hsl(var(--card))"
+                    strokeWidth={2}
                     label={(e: any) => `${e.asset} ${e.pct}%`}
                     labelLine={false}
                     fontSize={11}
