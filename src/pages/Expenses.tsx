@@ -295,6 +295,97 @@ export default function Expenses() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Import preview dialog */}
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Review imported transactions
+                </DialogTitle>
+              </DialogHeader>
+              <p className="text-xs text-muted-foreground">
+                {importFileName} · {importRows.filter((r) => r._selected).length} of {importRows.length} selected · amounts in {currency}
+              </p>
+              <div className="max-h-[55vh] overflow-auto border border-border/40 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/50 sticky top-0">
+                    <tr className="text-left">
+                      {["", "Date", "Type", "Category", "Description", "Amount"].map((h) => (
+                        <th key={h} className="px-2 py-2 font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.map((r, i) => (
+                      <tr key={i} className="border-t border-border/30">
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="checkbox"
+                            checked={r._selected}
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, _selected: e.target.checked } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            type="date"
+                            value={r.expense_date}
+                            className="h-7 text-xs"
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, expense_date: e.target.value } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Select value={r.type} onValueChange={(v: "income" | "expense") => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, type: v } : x))}>
+                            <SelectTrigger className="h-7 text-xs w-[90px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="income">Income</SelectItem>
+                              <SelectItem value="expense">Expense</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
+                            <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {EXPENSE_CATEGORIES[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            value={r.description}
+                            className="h-7 text-xs"
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={r.amount}
+                            className={`h-7 text-xs w-[90px] font-semibold ${r.type === "income" ? "text-success" : "text-destructive"}`}
+                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <div className="flex gap-2 text-xs">
+                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: true })))}>Select all</button>
+                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: false })))}>Clear</button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
+                  <Button onClick={handleImportSave} className="gap-2" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                    Import {importRows.filter((r) => r._selected).length}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
