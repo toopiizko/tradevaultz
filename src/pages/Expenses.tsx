@@ -3,6 +3,8 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { EXPENSE_CATEGORIES } from "@/lib/types";
+import { useCategories } from "@/hooks/useCategories";
+import { CategoryManager } from "@/components/CategoryManager";
 import { getUsdThbRate, formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
