@@ -246,6 +246,7 @@ export default function Expenses() {
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export</span>
           </Button>
+          <CategoryManager />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
