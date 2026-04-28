@@ -521,7 +521,18 @@ export default function Expenses() {
                       {e.type === "income" ? "IN" : "OUT"}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs">{e.category}</td>
+                  <td className="px-3 py-2.5 text-xs">
+                    <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
+                      <SelectTrigger className="h-7 text-xs w-[120px] border-border/40 bg-transparent hover:bg-secondary/60">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories[e.type as "income" | "expense"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
                   <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
                     {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
