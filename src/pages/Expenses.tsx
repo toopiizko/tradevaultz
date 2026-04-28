@@ -436,6 +436,8 @@ export default function Expenses() {
                     innerRadius={50}
                     outerRadius={90}
                     paddingAngle={2}
+                    stroke="hsl(var(--card))"
+                    strokeWidth={2}
                   >
                     {categoryData.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
