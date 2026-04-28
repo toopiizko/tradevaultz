@@ -3,6 +3,8 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { EXPENSE_CATEGORIES } from "@/lib/types";
+import { useCategories } from "@/hooks/useCategories";
+import { CategoryManager } from "@/components/CategoryManager";
 import { getUsdThbRate, formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ const CHART_COLORS = [
 export default function Expenses() {
   const { user } = useAuth();
   const { expenses, loading } = useExpenses();
+  const categories = useCategories();
   const [open, setOpen] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "THB">("USD");
   const [rate, setRate] = useState(36);
@@ -127,6 +130,12 @@ export default function Expenses() {
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
+  };
+
+  const handleUpdateCategory = async (id: string, category: string) => {
+    const { error } = await supabase.from("expenses").update({ category }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Category updated");
   };
 
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,6 +246,7 @@ export default function Expenses() {
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export</span>
           </Button>
+          <CategoryManager />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
@@ -248,7 +258,7 @@ export default function Expenses() {
               <form onSubmit={handleAdd} className="space-y-3">
                 <div>
                   <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: EXPENSE_CATEGORIES[v][0] })}>
+                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: categories[v][0] })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="income">Income</SelectItem>
@@ -283,7 +293,7 @@ export default function Expenses() {
                   <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {EXPENSE_CATEGORIES[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {categories[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -347,7 +357,7 @@ export default function Expenses() {
                           <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
                             <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              {EXPENSE_CATEGORIES[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              {categories[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </td>
@@ -511,7 +521,18 @@ export default function Expenses() {
                       {e.type === "income" ? "IN" : "OUT"}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs">{e.category}</td>
+                  <td className="px-3 py-2.5 text-xs">
+                    <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
+                      <SelectTrigger className="h-7 text-xs w-[120px] border-border/40 bg-transparent hover:bg-secondary/60">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories[e.type as "income" | "expense"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
                   <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
                     {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
