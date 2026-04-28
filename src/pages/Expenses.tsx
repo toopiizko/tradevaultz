@@ -132,6 +132,12 @@ export default function Expenses() {
     toast.success("Deleted");
   };
 
+  const handleUpdateCategory = async (id: string, category: string) => {
+    const { error } = await supabase.from("expenses").update({ category }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Category updated");
+  };
+
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
