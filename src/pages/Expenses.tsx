@@ -33,6 +33,7 @@ const CHART_COLORS = [
 export default function Expenses() {
   const { user } = useAuth();
   const { expenses, loading } = useExpenses();
+  const categories = useCategories();
   const [open, setOpen] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "THB">("USD");
   const [rate, setRate] = useState(36);
