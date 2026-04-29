@@ -28,7 +28,7 @@ export function useCategoriesDB() {
       .from("expense_categories" as any)
       .select("*")
       .order("created_at", { ascending: true });
-    setRows((data ?? []) as CategoryRow[]);
+    setRows(((data ?? []) as unknown) as CategoryRow[]);
     setLoading(false);
   }, [user]);
 
@@ -66,7 +66,7 @@ export function useCategoriesDB() {
     if (existing.includes(n.toLowerCase())) return false;
     const { error } = await supabase
       .from("expense_categories" as any)
-      .insert({ user_id: user.id, name: n, type, color });
+      .insert({ user_id: user.id, name: n, type, color } as any);
     if (error) return false;
     return true;
   }, [user, rows]);

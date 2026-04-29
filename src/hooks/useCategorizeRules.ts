@@ -29,7 +29,7 @@ export function useCategorizeRules() {
       .from("categorize_rules" as any)
       .select("*")
       .order("priority", { ascending: false });
-    setRules((data ?? []) as CategorizeRule[]);
+    setRules(((data ?? []) as unknown) as CategorizeRule[]);
     setLoading(false);
   }, [user]);
 
@@ -47,7 +47,7 @@ export function useCategorizeRules() {
     if (!user) return;
     const { error } = await supabase
       .from("categorize_rules" as any)
-      .insert({ ...data, user_id: user.id });
+      .insert({ ...data, user_id: user.id } as any);
     if (error) throw error;
   }, [user]);
 

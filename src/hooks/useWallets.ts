@@ -43,7 +43,7 @@ export function useWallets() {
       .from("wallets" as any)
       .select("*")
       .order("created_at", { ascending: true });
-    setWallets((data ?? []) as Wallet[]);
+    setWallets(((data ?? []) as unknown) as Wallet[]);
     setLoading(false);
   }, [user]);
 
@@ -61,15 +61,15 @@ export function useWallets() {
     if (!user) return null;
     const { data: created, error } = await supabase
       .from("wallets" as any)
-      .insert({ ...data, user_id: user.id })
+      .insert({ ...data, user_id: user.id } as any)
       .select()
       .single();
     if (error) throw error;
-    return created as Wallet;
+    return created as unknown as Wallet;
   }, [user]);
 
   const update = useCallback(async (id: string, patch: Partial<Wallet>) => {
-    const { error } = await supabase.from("wallets" as any).update(patch).eq("id", id);
+    const { error } = await supabase.from("wallets" as any).update(patch as any).eq("id", id);
     if (error) throw error;
   }, []);
 
