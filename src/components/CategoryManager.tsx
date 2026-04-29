@@ -1,20 +1,27 @@
 import { useState } from "react";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategoriesDB } from "@/hooks/useCategoriesDB";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, X, Tag, Settings2 } from "lucide-react";
+import { Plus, X, Tag, Settings2, Cloud } from "lucide-react";
 import { toast } from "sonner";
 
+const PRESET_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
+
 export function CategoryManager({ trigger }: { trigger?: React.ReactNode }) {
-  const { income, expense, add, remove, isCustom } = useCategories();
+  const { income, expense, add, remove, isCustom, colorOf } = useCategoriesDB();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"expense" | "income">("expense");
   const [name, setName] = useState("");
+  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [busy, setBusy] = useState(false);
 
-  const handleAdd = () => {
-    const ok = add(tab, name);
+  const handleAdd = async () => {
+    if (!name.trim()) return;
+    setBusy(true);
+    const ok = await add(tab, name, color);
+    setBusy(false);
     if (!ok) return toast.error("Invalid or duplicate category");
     toast.success("Category added");
     setName("");
@@ -36,6 +43,9 @@ export function CategoryManager({ trigger }: { trigger?: React.ReactNode }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-primary" /> Manage Categories
+            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground font-normal">
+              <Cloud className="h-3 w-3" /> Synced
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -47,35 +57,48 @@ export function CategoryManager({ trigger }: { trigger?: React.ReactNode }) {
 
           {(["expense", "income"] as const).map((t) => (
             <TabsContent key={t} value={t} className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  placeholder={`New ${t} category…`}
-                  value={tab === t ? name : ""}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
-                />
-                <Button onClick={handleAdd} className="gap-1 shrink-0" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
-                  <Plus className="h-4 w-4" /> Add
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={`New ${t} category…`}
+                    value={tab === t ? name : ""}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+                    disabled={busy}
+                  />
+                  <Button onClick={handleAdd} className="gap-1 shrink-0" disabled={busy} style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                    <Plus className="h-4 w-4" /> Add
+                  </Button>
+                </div>
+                <div className="flex gap-1.5">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      className={`h-6 w-6 rounded-full border-2 transition ${color === c ? "border-foreground scale-110" : "border-transparent"}`}
+                      style={{ background: c }}
+                      aria-label={c}
+                    />
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2 max-h-[50vh] overflow-y-auto">
                 {list.map((c) => {
                   const custom = isCustom(t, c);
+                  const dot = colorOf(t, c);
                   return (
                     <span
                       key={c}
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border ${
-                        custom ? "bg-primary/10 border-primary/30 text-primary" : "bg-secondary/60 border-border/40 text-foreground"
+                        custom ? "bg-primary/10 border-primary/30 text-foreground" : "bg-secondary/60 border-border/40 text-foreground"
                       }`}
                     >
+                      {dot && <span className="h-2 w-2 rounded-full" style={{ background: dot }} />}
                       {c}
                       {custom ? (
-                        <button
-                          onClick={() => remove(t, c)}
-                          className="hover:text-destructive"
-                          aria-label={`Remove ${c}`}
-                        >
+                        <button onClick={() => remove(t, c)} className="hover:text-destructive" aria-label={`Remove ${c}`}>
                           <X className="h-3 w-3" />
                         </button>
                       ) : (
@@ -85,7 +108,7 @@ export function CategoryManager({ trigger }: { trigger?: React.ReactNode }) {
                   );
                 })}
               </div>
-              <p className="text-[11px] text-muted-foreground">Custom categories are saved on this device.</p>
+              <p className="text-[11px] text-muted-foreground">Saved to your account — works on every device.</p>
             </TabsContent>
           ))}
         </Tabs>

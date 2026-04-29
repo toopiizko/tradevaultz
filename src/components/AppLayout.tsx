@@ -7,21 +7,24 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { PortfolioSwitcher } from "@/components/PortfolioSwitcher";
 import { useState } from "react";
 
-const primaryNav = [
+const tradingNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/trades", label: "Trade History", icon: BookOpen },
   { to: "/calculator", label: "Calculator", icon: Calculator },
-  { to: "/expenses", label: "Expenses", icon: Wallet },
 ];
 
-const secondaryNav = [
-  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
+const moneyNav = [
+  { to: "/expenses", label: "Expenses", icon: Wallet },
   { to: "/expenses/calendar", label: "Expense Calendar", icon: CalendarDays },
+];
+
+const insightsNav = [
+  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
   { to: "/portfolios", label: "Portfolios", icon: Briefcase },
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 
-const allNav = [...primaryNav, ...secondaryNav];
+const allNav = [...tradingNav, ...moneyNav, ...insightsNav];
 
 function NavItem({ to, label, icon: Icon, onClick }: any) {
   return (
@@ -50,9 +53,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Split into 2 + center FAB + 2
-  const leftNav = primaryNav.slice(0, 2);
-  const rightNav = primaryNav.slice(2);
+  // Bottom bar: Dashboard, Trades | FAB | Expenses, P&L Calendar (Calculator removed per user request)
+  const bottomNav = [
+    { to: "/", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/trades", label: "Trades", icon: BookOpen },
+    { to: "/expenses", label: "Expenses", icon: Wallet },
+    { to: "/calendar", label: "Calendar", icon: Calendar },
+  ];
+  const leftNav = bottomNav.slice(0, 2);
+  const rightNav = bottomNav.slice(2);
 
   const handleAddTrade = () => {
     // Navigate to trades and signal to open the dialog
@@ -87,10 +96,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Main</p>
-          {primaryNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Trading</p>
+          {tradingNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Money</p>
+          {moneyNav.map((item) => <NavItem key={item.to} {...item} />)}
           <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Insights</p>
-          {secondaryNav.map((item) => <NavItem key={item.to} {...item} />)}
+          {insightsNav.map((item) => <NavItem key={item.to} {...item} />)}
         </nav>
 
         <div className="p-3 border-t border-border/60">

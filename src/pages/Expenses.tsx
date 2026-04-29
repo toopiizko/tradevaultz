@@ -2,84 +2,135 @@ import { useEffect, useMemo, useState } from "react";
 import { useExpenses } from "@/hooks/useExpenses";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { EXPENSE_CATEGORIES } from "@/lib/types";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategoriesDB } from "@/hooks/useCategoriesDB";
+import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
+import { useCategorizeRules } from "@/hooks/useCategorizeRules";
 import { CategoryManager } from "@/components/CategoryManager";
+import { WalletManager } from "@/components/WalletManager";
+import { RulesManager } from "@/components/RulesManager";
 import { getUsdThbRate, formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, PieChart as PieIcon, Upload, Download, Sparkles, Edit2 } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import {
+  Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Info,
+} from "lucide-react";
 import { toast } from "sonner";
-import { format, startOfMonth } from "date-fns";
+import {
+  format, startOfMonth, endOfMonth, addMonths, subMonths,
+  startOfWeek, endOfWeek, startOfYear, endOfYear, subDays,
+} from "date-fns";
 import { extractStatementText, exportExpensesToExcel } from "@/lib/statementIO";
-import { Textarea } from "@/components/ui/textarea";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const CHART_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--success))",
-  "hsl(var(--destructive))",
-  "hsl(48 96% 53%)",
-  "hsl(280 70% 60%)",
-  "hsl(190 80% 55%)",
-  "hsl(20 90% 60%)",
-  "hsl(150 60% 50%)",
-  "hsl(330 70% 60%)",
+  "hsl(174 72% 50%)", "hsl(250 70% 60%)", "hsl(38 92% 55%)", "hsl(340 75% 55%)",
+  "hsl(195 80% 55%)", "hsl(150 60% 50%)", "hsl(20 85% 55%)", "hsl(280 65% 60%)",
+  "hsl(100 60% 45%)", "hsl(0 70% 55%)",
 ];
+
+type PeriodKey = "this-month" | "last-month" | "this-week" | "last-7" | "this-year" | "all";
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  "this-month": "This month",
+  "last-month": "Last month",
+  "this-week": "This week",
+  "last-7": "Last 7 days",
+  "this-year": "This year",
+  "all": "All time",
+};
+
+function rangeFor(key: PeriodKey, cursor: Date): { start: Date | null; end: Date | null; label: string } {
+  const now = new Date();
+  switch (key) {
+    case "this-month":  return { start: startOfMonth(cursor), end: endOfMonth(cursor), label: format(cursor, "MMMM yyyy") };
+    case "last-month": { const d = subMonths(now, 1); return { start: startOfMonth(d), end: endOfMonth(d), label: format(d, "MMMM yyyy") }; }
+    case "this-week":  return { start: startOfWeek(now), end: endOfWeek(now), label: "This week" };
+    case "last-7":     return { start: subDays(now, 6), end: now, label: "Last 7 days" };
+    case "this-year":  return { start: startOfYear(now), end: endOfYear(now), label: format(now, "yyyy") };
+    case "all":        return { start: null, end: null, label: "All time" };
+  }
+}
 
 export default function Expenses() {
   const { user } = useAuth();
   const { expenses, loading } = useExpenses();
-  const categories = useCategories();
+  const categories = useCategoriesDB();
+  const { wallets, activeId: activeWalletId } = useWallets();
+  const { apply: applyRules } = useCategorizeRules();
+
   const [open, setOpen] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "THB">("USD");
   const [rate, setRate] = useState(36);
+  const [period, setPeriod] = useState<PeriodKey>("this-month");
+  const [monthCursor, setMonthCursor] = useState(new Date());
+
+  useEffect(() => { getUsdThbRate().then(setRate); }, []);
 
   const [form, setForm] = useState({
     type: "expense" as "income" | "expense",
     amount: "",
-    category: EXPENSE_CATEGORIES.expense[0],
+    category: "Food",
     description: "",
     expense_date: format(new Date(), "yyyy-MM-dd"),
+    wallet_id: "" as string,
   });
-
-  useEffect(() => {
-    getUsdThbRate().then(setRate);
-  }, []);
 
   // Import state
   const [importing, setImporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importCurrencyOpen, setImportCurrencyOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [importCurrency, setImportCurrency] = useState<"USD" | "THB">("USD");
   const [importRows, setImportRows] = useState<Array<{
     type: "income" | "expense"; amount: number; category: string; description: string; expense_date: string; _selected: boolean;
   }>>([]);
   const [importFileName, setImportFileName] = useState("");
-  const ALL_CATS = [...EXPENSE_CATEGORIES.income, ...EXPENSE_CATEGORIES.expense];
+
+  // Filter expenses by wallet + period
+  const range = useMemo(() => rangeFor(period, monthCursor), [period, monthCursor]);
+  const filteredAll = useMemo(() => {
+    return expenses.filter((e) => {
+      if (activeWalletId !== ALL_WALLETS && (e as any).wallet_id !== activeWalletId) return false;
+      if (range.start && range.end) {
+        const d = new Date(e.expense_date);
+        if (d < range.start || d > range.end) return false;
+      }
+      return true;
+    });
+  }, [expenses, activeWalletId, range]);
 
   const totals = useMemo(() => {
-    const income = expenses.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
-    const expense = expenses.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
+    const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
+    const expense = filteredAll.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
     return { income, expense, net: income - expense };
-  }, [expenses]);
+  }, [filteredAll]);
 
   const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
+  const display = (amount: number) => formatMoney(convert(amount), currency);
 
   const categoryData = useMemo(() => {
     const map = new Map<string, number>();
-    expenses
+    filteredAll
       .filter((e) => e.type === "expense")
       .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + Number(e.amount)));
+    const total = Array.from(map.values()).reduce((s, v) => s + v, 0) || 1;
     return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value: Number(convert(value).toFixed(2)) }))
+      .map(([name, valueUsd]) => ({
+        name,
+        value: Number(convert(valueUsd).toFixed(2)),
+        valueUsd,
+        pct: (valueUsd / total) * 100,
+      }))
       .sort((a, b) => b.value - a.value);
-  }, [expenses, currency, rate]);
+  }, [filteredAll, currency, rate]);
 
   const monthlyData = useMemo(() => {
     const map = new Map<string, { month: string; income: number; expense: number }>();
-    expenses.forEach((e) => {
+    filteredAll.forEach((e) => {
       const key = format(startOfMonth(new Date(e.expense_date)), "yyyy-MM");
       const label = format(new Date(e.expense_date), "MMM yy");
       const cur = map.get(key) ?? { month: label, income: 0, expense: 0 };
@@ -95,22 +146,15 @@ export default function Expenses() {
         Income: Number(convert(v.income).toFixed(2)),
         Expense: Number(convert(v.expense).toFixed(2)),
       }));
-  }, [expenses, currency, rate]);
+  }, [filteredAll, currency, rate]);
 
-  const topCategory = categoryData[0];
-  const totalExpenseConverted = categoryData.reduce((s, c) => s + c.value, 0);
-
-  const display = (amount: number) => {
-    const v = currency === "THB" ? amount * rate : amount;
-    return formatMoney(v, currency);
-  };
+  const totalExpense = categoryData.reduce((s, c) => s + c.value, 0);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     const inputAmount = parseFloat(form.amount);
     if (Number.isNaN(inputAmount)) return toast.error("Invalid amount");
-    // Always store in USD (base currency); convert if user typed in THB
     const amountUsd = currency === "THB" ? inputAmount / rate : inputAmount;
     const { error } = await supabase.from("expenses").insert({
       user_id: user.id,
@@ -119,7 +163,8 @@ export default function Expenses() {
       category: form.category,
       description: form.description || null,
       expense_date: new Date(form.expense_date).toISOString(),
-    });
+      ...(form.wallet_id ? { wallet_id: form.wallet_id } as any : {}),
+    } as any);
     if (error) return toast.error(error.message);
     toast.success("Saved!");
     setOpen(false);
@@ -138,35 +183,51 @@ export default function Expenses() {
     toast.success("Category updated");
   };
 
-  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpdateWallet = async (id: string, wallet_id: string | null) => {
+    const { error } = await supabase.from("expenses").update({ wallet_id } as any).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Wallet updated");
+  };
+
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setPendingFile(file);
+    setImportCurrency(currency);
+    setImportCurrencyOpen(true);
+  };
+
+  const runImport = async () => {
+    if (!pendingFile) return;
+    setImportCurrencyOpen(false);
+    const file = pendingFile;
+    setPendingFile(null);
     try {
       setImporting(true);
       toast.info("Reading file…");
       const text = await extractStatementText(file);
       if (!text.trim()) throw new Error("Could not read file content");
-
       toast.info("AI analyzing statement…");
       const { data, error } = await supabase.functions.invoke("analyze-statement", {
-        body: { text, currencyHint: currency },
+        body: { text, currencyHint: importCurrency },
       });
       if (error) throw error;
       const txns = (data?.transactions ?? []) as Array<any>;
-      if (!txns.length) {
-        toast.warning("No transactions detected");
-        setImporting(false);
-        return;
-      }
-      setImportRows(txns.map((t) => ({
-        type: t.type === "income" ? "income" : "expense",
-        amount: Number(t.amount) || 0,
-        category: t.category || "Other",
-        description: String(t.description || ""),
-        expense_date: String(t.expense_date || format(new Date(), "yyyy-MM-dd")).slice(0, 10),
-        _selected: true,
-      })));
+      if (!txns.length) { toast.warning("No transactions detected"); return; }
+      setImportRows(txns.map((t) => {
+        const description = String(t.description || "");
+        const type = (t.type === "income" ? "income" : "expense") as "income" | "expense";
+        const ruled = applyRules(description, type);
+        return {
+          type,
+          amount: Number(t.amount) || 0,
+          category: ruled || t.category || "Other",
+          description,
+          expense_date: String(t.expense_date || format(new Date(), "yyyy-MM-dd")).slice(0, 10),
+          _selected: true,
+        };
+      }));
       setImportFileName(file.name);
       setImportOpen(true);
       toast.success(`Found ${txns.length} transactions`);
@@ -182,9 +243,9 @@ export default function Expenses() {
     if (!user) return;
     const picked = importRows.filter((r) => r._selected);
     if (!picked.length) return toast.error("Nothing selected");
+    const wallet_id = activeWalletId !== ALL_WALLETS ? activeWalletId : null;
     const rows = picked.map((r) => {
-      // treat amount as already in the selected currency; store as USD
-      const amountUsd = currency === "THB" ? r.amount / rate : r.amount;
+      const amountUsd = importCurrency === "THB" ? r.amount / rate : r.amount;
       return {
         user_id: user.id,
         type: r.type,
@@ -192,9 +253,10 @@ export default function Expenses() {
         category: r.category,
         description: r.description || null,
         expense_date: new Date(r.expense_date).toISOString(),
+        ...(wallet_id ? { wallet_id } as any : {}),
       };
     });
-    const { error } = await supabase.from("expenses").insert(rows);
+    const { error } = await supabase.from("expenses").insert(rows as any);
     if (error) return toast.error(error.message);
     toast.success(`Imported ${rows.length} transactions`);
     setImportOpen(false);
@@ -202,86 +264,84 @@ export default function Expenses() {
   };
 
   const handleExport = () => {
-    if (!expenses.length) return toast.error("Nothing to export");
-    exportExpensesToExcel(expenses as any);
-    toast.success("Exported");
+    if (!filteredAll.length) return toast.error("Nothing to export");
+    exportExpensesToExcel(filteredAll as any, `expenses-${currency}-${range.label.replace(/\s+/g, "-")}.xlsx`);
+    toast.success(`Exported in ${currency}`);
   };
 
+  const walletOf = (id: string | null | undefined) => wallets.find((w) => w.id === id);
+  const activeWallet = activeWalletId === ALL_WALLETS ? null : wallets.find((w) => w.id === activeWalletId);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Expense Tracker</h1>
-          <p className="text-muted-foreground mt-1">Personal income & expenses (1 USD ≈ {rate.toFixed(2)} THB)</p>
+    <div className="space-y-5 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Expense Tracker</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">
+            {activeWallet ? <><span className="inline-block h-2 w-2 rounded-full mr-1.5 align-middle" style={{ background: activeWallet.color }} />{activeWallet.name} · </> : "All wallets · "}
+            1 USD ≈ {rate.toFixed(2)} THB
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex rounded-lg border border-border bg-secondary/50 p-0.5">
             {(["USD", "THB"] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCurrency(c)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+              <button key={c} onClick={() => setCurrency(c)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
                   currency === c ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {c}
-              </button>
+                }`}>{c}</button>
             ))}
           </div>
           <label className="relative">
-            <input
-              type="file"
-              accept=".pdf,.xlsx,.xls,.csv"
-              onChange={handleFilePick}
-              disabled={importing}
-              className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-wait"
-            />
-            <Button variant="outline" className="gap-2 pointer-events-none" disabled={importing}>
-              {importing ? <Sparkles className="h-4 w-4 animate-pulse" /> : <Upload className="h-4 w-4" />}
+            <input type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={handleFilePick} disabled={importing}
+              className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-wait" />
+            <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" disabled={importing}>
+              {importing ? <Sparkles className="h-3.5 w-3.5 animate-pulse" /> : <Upload className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">{importing ? "Analyzing…" : "Import"}</span>
             </Button>
           </label>
-          <Button variant="outline" className="gap-2" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Export</span>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+            <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
+          <WalletManager />
           <CategoryManager />
+          <RulesManager />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
-                <Plus className="h-4 w-4" /> Add
+              <Button size="sm" className="gap-1.5 font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                <Plus className="h-3.5 w-3.5" /> Add
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Add Transaction</DialogTitle></DialogHeader>
               <form onSubmit={handleAdd} className="space-y-3">
-                <div>
-                  <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: categories[v][0] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Type</Label>
+                    <Select value={form.type} onValueChange={(v: "income" | "expense") => setForm({ ...form, type: v, category: (v === "income" ? categories.income : categories.expense)[0] })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="expense">Expense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Wallet</Label>
+                    <Select value={form.wallet_id || "none"} onValueChange={(v) => setForm({ ...form, wallet_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Amount ({currency})</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={form.amount}
-                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                      placeholder={currency === "THB" ? "e.g. 1000" : "e.g. 25.00"}
-                    />
-                    {currency === "THB" && form.amount && (
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        ≈ ${(parseFloat(form.amount) / rate || 0).toFixed(2)} USD (stored)
-                      </p>
-                    )}
+                    <Input type="number" step="0.01" required value={form.amount}
+                      onChange={(e) => setForm({ ...form, amount: e.target.value })} />
                   </div>
                   <div>
                     <Label>Date</Label>
@@ -293,188 +353,130 @@ export default function Expenses() {
                   <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {categories[form.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {(form.type === "income" ? categories.income : categories.expense).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Description</Label>
+                  <Label>Description / Note</Label>
                   <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>
                 <Button type="submit" className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save</Button>
               </form>
             </DialogContent>
           </Dialog>
-
-          {/* Import preview dialog */}
-          <Dialog open={importOpen} onOpenChange={setImportOpen}>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" /> Review imported transactions
-                </DialogTitle>
-              </DialogHeader>
-              <p className="text-xs text-muted-foreground">
-                {importFileName} · {importRows.filter((r) => r._selected).length} of {importRows.length} selected · amounts in {currency}
-              </p>
-              <div className="max-h-[55vh] overflow-auto border border-border/40 rounded-lg">
-                <table className="w-full text-xs">
-                  <thead className="bg-secondary/50 sticky top-0">
-                    <tr className="text-left">
-                      {["", "Date", "Type", "Category", "Description", "Amount"].map((h) => (
-                        <th key={h} className="px-2 py-2 font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importRows.map((r, i) => (
-                      <tr key={i} className="border-t border-border/30">
-                        <td className="px-2 py-1.5">
-                          <input
-                            type="checkbox"
-                            checked={r._selected}
-                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, _selected: e.target.checked } : x))}
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <Input
-                            type="date"
-                            value={r.expense_date}
-                            className="h-7 text-xs"
-                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, expense_date: e.target.value } : x))}
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <Select value={r.type} onValueChange={(v: "income" | "expense") => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, type: v } : x))}>
-                            <SelectTrigger className="h-7 text-xs w-[90px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="income">Income</SelectItem>
-                              <SelectItem value="expense">Expense</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
-                            <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {categories[r.type].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <Input
-                            value={r.description}
-                            className="h-7 text-xs"
-                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={r.amount}
-                            className={`h-7 text-xs w-[90px] font-semibold ${r.type === "income" ? "text-success" : "text-destructive"}`}
-                            onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex items-center justify-between gap-2 pt-2">
-                <div className="flex gap-2 text-xs">
-                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: true })))}>Select all</button>
-                  <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: false })))}>Clear</button>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
-                  <Button onClick={handleImportSave} className="gap-2" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
-                    Import {importRows.filter((r) => r._selected).length}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
+      {/* Period filter row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={period} onValueChange={(v: PeriodKey) => setPeriod(v)}>
+          <SelectTrigger className="w-[150px] h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((k) => (
+              <SelectItem key={k} value={k}>{PERIOD_LABELS[k]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {period === "this-month" && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMonthCursor(subMonths(monthCursor, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[110px] text-center">{format(monthCursor, "MMMM yyyy")}</span>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMonthCursor(addMonths(monthCursor, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        {period !== "this-month" && (
+          <span className="text-xs text-muted-foreground">{range.label}</span>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground">{filteredAll.length} transactions</span>
+      </div>
+
+      {/* Stat cards */}
       <div className="grid grid-cols-3 gap-3 lg:gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-2 mb-1">
             <ArrowUpCircle className="h-4 w-4 text-success" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Income</p>
+            <p className="text-[10px] lg:text-xs uppercase tracking-wider text-muted-foreground">Income</p>
           </div>
-          <p className="text-xl lg:text-2xl font-bold text-success">{display(totals.income)}</p>
+          <p className="text-lg lg:text-2xl font-bold text-success">{display(totals.income)}</p>
         </div>
         <div className="stat-card">
           <div className="flex items-center gap-2 mb-1">
             <ArrowDownCircle className="h-4 w-4 text-destructive" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Expense</p>
+            <p className="text-[10px] lg:text-xs uppercase tracking-wider text-muted-foreground">Expense</p>
           </div>
-          <p className="text-xl lg:text-2xl font-bold text-destructive">{display(totals.expense)}</p>
+          <p className="text-lg lg:text-2xl font-bold text-destructive">{display(totals.expense)}</p>
         </div>
         <div className="stat-card border-primary/30" style={{ boxShadow: "var(--shadow-glow)" }}>
           <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-4 w-4 text-primary" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Net</p>
+            <WalletIcon className="h-4 w-4 text-primary" />
+            <p className="text-[10px] lg:text-xs uppercase tracking-wider text-muted-foreground">Net</p>
           </div>
-          <p className={`text-xl lg:text-2xl font-bold ${totals.net >= 0 ? "text-success" : "text-destructive"}`}>{display(totals.net)}</p>
+          <p className={`text-lg lg:text-2xl font-bold ${totals.net >= 0 ? "text-success" : "text-destructive"}`}>{display(totals.net)}</p>
         </div>
       </div>
 
-      {/* Insights dashboard */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="glass-card rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <PieIcon className="h-4 w-4 text-primary" />
-              <h2 className="font-semibold">Spending by Category</h2>
+              <h2 className="font-semibold text-sm lg:text-base">Spending by Category</h2>
             </div>
             <span className="text-xs text-muted-foreground">{currency}</span>
           </div>
           <div className="h-64">
             {categoryData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No expenses yet</div>
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No expenses in this period</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={categoryData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    stroke="hsl(var(--card))"
-                    strokeWidth={2}
-                  >
+                  <Pie data={categoryData} dataKey="value" nameKey="name"
+                    innerRadius={50} outerRadius={90} paddingAngle={2}
+                    stroke="hsl(var(--card))" strokeWidth={2}>
                     {categoryData.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
                     contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: number) => formatMoney(v, currency)}
+                    formatter={(v: any, _n: any, p: any) => [
+                      `${formatMoney(Number(v), currency)} (${p.payload.pct.toFixed(1)}%)`,
+                      p.payload.name,
+                    ]}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
           </div>
-          {topCategory && (
-            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Top category</span>
-              <span className="font-semibold">
-                {topCategory.name} · {((topCategory.value / totalExpenseConverted) * 100).toFixed(0)}%
-              </span>
+          {/* Top categories list with % */}
+          {categoryData.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/40 space-y-1.5 max-h-32 overflow-y-auto">
+              {categoryData.slice(0, 5).map((c, i) => (
+                <div key={c.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                    <span className="truncate">{c.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-muted-foreground">{c.pct.toFixed(1)}%</span>
+                    <span className="font-semibold">{formatMoney(c.value, currency)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         <div className="glass-card rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Monthly Trend</h2>
+            <h2 className="font-semibold text-sm lg:text-base">Monthly Trend</h2>
             <span className="text-xs text-muted-foreground">Last 6 months</span>
           </div>
           <div className="h-64">
@@ -486,10 +488,8 @@ export default function Expenses() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: number) => formatMoney(v, currency)}
-                  />
+                  <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => formatMoney(v, currency)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="Income" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
@@ -500,52 +500,231 @@ export default function Expenses() {
         </div>
       </div>
 
+      {/* History */}
       <div className="glass-card rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between">
+          <h2 className="font-semibold text-sm">History</h2>
+          <span className="text-xs text-muted-foreground">{range.label}</span>
+        </div>
+
+        {/* Mobile compact list */}
+        <ul className="lg:hidden divide-y divide-border/40">
+          {loading && <li className="py-12 text-center text-muted-foreground text-sm">Loading…</li>}
+          {!loading && filteredAll.length === 0 && <li className="py-12 text-center text-muted-foreground text-sm">No transactions</li>}
+          {filteredAll.map((e) => {
+            const w = walletOf((e as any).wallet_id);
+            return (
+              <li key={e.id} className="px-3 py-2.5">
+                <HoverCard openDelay={120} closeDelay={80}>
+                  <HoverCardTrigger asChild>
+                    <button className="w-full flex items-center gap-2 text-left">
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
+                      <span className="flex-1 min-w-0 text-sm truncate">
+                        {e.description || <span className="text-muted-foreground italic">No note</span>}
+                      </span>
+                      <span className={`text-sm font-bold shrink-0 ${e.type === "income" ? "text-success" : "text-destructive"}`}>
+                        {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                      </span>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-72 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="font-medium">{format(new Date(e.expense_date), "MMM dd, yyyy")}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Category</span>
+                      <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
+                        <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(e.type === "income" ? categories.income : categories.expense).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Wallet</span>
+                      <Select value={(e as any).wallet_id ?? "none"} onValueChange={(v) => handleUpdateWallet(e.id, v === "none" ? null : v)}>
+                        <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {e.description && (
+                      <div>
+                        <p className="text-muted-foreground mb-1">Note</p>
+                        <p className="text-foreground">{e.description}</p>
+                      </div>
+                    )}
+                    <Button size="sm" variant="ghost" className="w-full text-destructive gap-2" onClick={() => handleDelete(e.id)}>
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </Button>
+                  </HoverCardContent>
+                </HoverCard>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
-                {["Date", "Type", "Category", "Description", "Amount", ""].map((h) => (
+                {["Date", "Type", "Category", "Wallet", "Description", "Amount", ""].map((h) => (
                   <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
-              {!loading && expenses.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-muted-foreground">No transactions yet.</td></tr>}
-              {expenses.map((e) => (
-                <tr key={e.id} className="border-b border-border/40 hover:bg-secondary/30">
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
-                      {e.type === "income" ? "IN" : "OUT"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-xs">
-                    <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
-                      <SelectTrigger className="h-7 text-xs w-[120px] border-border/40 bg-transparent hover:bg-secondary/60">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories[e.type as "income" | "expense"].map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
-                  <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                    {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </td>
-                </tr>
-              ))}
+              {loading && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
+              {!loading && filteredAll.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No transactions</td></tr>}
+              {filteredAll.map((e) => {
+                const w = walletOf((e as any).wallet_id);
+                return (
+                  <tr key={e.id} className="border-b border-border/40 hover:bg-secondary/30">
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+                        {e.type === "income" ? "IN" : "OUT"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
+                        <SelectTrigger className="h-7 text-xs w-[120px] border-border/40 bg-transparent hover:bg-secondary/60"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(e.type === "income" ? categories.income : categories.expense).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      <Select value={(e as any).wallet_id ?? "none"} onValueChange={(v) => handleUpdateWallet(e.id, v === "none" ? null : v)}>
+                        <SelectTrigger className="h-7 text-xs w-[120px] border-border/40 bg-transparent hover:bg-secondary/60">
+                          {w ? (
+                            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: w.color }} />{w.name}</span>
+                          ) : <span className="text-muted-foreground">None</span>}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                    <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
+                      {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Import currency dialog */}
+      <Dialog open={importCurrencyOpen} onOpenChange={(o) => { if (!o) { setPendingFile(null); } setImportCurrencyOpen(o); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Statement currency</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">What currency are the amounts in <span className="font-medium text-foreground">{pendingFile?.name}</span>?</p>
+          <div className="flex gap-2">
+            {(["USD", "THB"] as const).map((c) => (
+              <button key={c} onClick={() => setImportCurrency(c)}
+                className={`flex-1 py-3 rounded-lg border-2 font-semibold transition ${
+                  importCurrency === c ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-border/80"
+                }`}>{c}</button>
+            ))}
+          </div>
+          <Button onClick={runImport} className="w-full" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+            Continue
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import preview dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> Review imported transactions
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {importFileName} · {importRows.filter((r) => r._selected).length} of {importRows.length} selected · amounts in {importCurrency}
+            {activeWallet ? <> · saving to <span className="font-medium text-foreground">{activeWallet.name}</span></> : ""}
+          </p>
+          <div className="max-h-[55vh] overflow-auto border border-border/40 rounded-lg">
+            <table className="w-full text-xs">
+              <thead className="bg-secondary/50 sticky top-0">
+                <tr className="text-left">
+                  {["", "Date", "Type", "Category", "Description", "Amount"].map((h) => (
+                    <th key={h} className="px-2 py-2 font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {importRows.map((r, i) => (
+                  <tr key={i} className="border-t border-border/30">
+                    <td className="px-2 py-1.5">
+                      <input type="checkbox" checked={r._selected}
+                        onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, _selected: e.target.checked } : x))} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Input type="date" value={r.expense_date} className="h-7 text-xs"
+                        onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, expense_date: e.target.value } : x))} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Select value={r.type} onValueChange={(v: "income" | "expense") => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, type: v } : x))}>
+                        <SelectTrigger className="h-7 text-xs w-[90px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="income">Income</SelectItem>
+                          <SelectItem value="expense">Expense</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Select value={r.category} onValueChange={(v) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
+                        <SelectTrigger className="h-7 text-xs w-[110px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(r.type === "income" ? categories.income : categories.expense).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Input value={r.description} className="h-7 text-xs"
+                        onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Input type="number" step="0.01" value={r.amount}
+                        className={`h-7 text-xs w-[90px] font-semibold ${r.type === "income" ? "text-success" : "text-destructive"}`}
+                        onChange={(e) => setImportRows((rs) => rs.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <div className="flex gap-2 text-xs">
+              <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: true })))}>Select all</button>
+              <button className="underline text-muted-foreground hover:text-foreground" onClick={() => setImportRows((rs) => rs.map((r) => ({ ...r, _selected: false })))}>Clear</button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
+              <Button onClick={handleImportSave} style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+                Import {importRows.filter((r) => r._selected).length}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

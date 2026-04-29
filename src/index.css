@@ -157,7 +157,12 @@
 
 @layer components {
   .glass-card {
-    @apply bg-card/70 backdrop-blur-xl border border-border/60;
+    @apply bg-card/80 backdrop-blur-xl border border-border/60 shadow-sm;
+  }
+  .dark .glass-card {
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.04) inset, 0 4px 16px -4px hsl(0 0% 0% / 0.5);
   }
   .stat-card {
     @apply rounded-xl p-5 glass-card transition-all hover:border-primary/40;
