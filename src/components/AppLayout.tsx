@@ -7,21 +7,24 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { PortfolioSwitcher } from "@/components/PortfolioSwitcher";
 import { useState } from "react";
 
-const primaryNav = [
+const tradingNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/trades", label: "Trade History", icon: BookOpen },
   { to: "/calculator", label: "Calculator", icon: Calculator },
-  { to: "/expenses", label: "Expenses", icon: Wallet },
 ];
 
-const secondaryNav = [
-  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
+const moneyNav = [
+  { to: "/expenses", label: "Expenses", icon: Wallet },
   { to: "/expenses/calendar", label: "Expense Calendar", icon: CalendarDays },
+];
+
+const insightsNav = [
+  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
   { to: "/portfolios", label: "Portfolios", icon: Briefcase },
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 
-const allNav = [...primaryNav, ...secondaryNav];
+const allNav = [...tradingNav, ...moneyNav, ...insightsNav];
 
 function NavItem({ to, label, icon: Icon, onClick }: any) {
   return (
