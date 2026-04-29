@@ -25,7 +25,7 @@ export function useCategoriesDB() {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("expense_categories")
+      .from("expense_categories" as any)
       .select("*")
       .order("created_at", { ascending: true });
     setRows((data ?? []) as CategoryRow[]);
@@ -65,7 +65,7 @@ export function useCategoriesDB() {
       .map((s) => s.toLowerCase());
     if (existing.includes(n.toLowerCase())) return false;
     const { error } = await supabase
-      .from("expense_categories")
+      .from("expense_categories" as any)
       .insert({ user_id: user.id, name: n, type, color });
     if (error) return false;
     return true;
@@ -74,7 +74,7 @@ export function useCategoriesDB() {
   const remove = useCallback(async (type: "income" | "expense", name: string) => {
     const row = rows.find((r) => r.type === type && r.name === name);
     if (!row) return;
-    await supabase.from("expense_categories").delete().eq("id", row.id);
+    await supabase.from("expense_categories" as any).delete().eq("id", row.id);
   }, [rows]);
 
   const isCustom = useCallback((type: "income" | "expense", name: string) => {

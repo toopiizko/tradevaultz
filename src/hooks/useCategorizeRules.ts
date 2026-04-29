@@ -26,7 +26,7 @@ export function useCategorizeRules() {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("categorize_rules")
+      .from("categorize_rules" as any)
       .select("*")
       .order("priority", { ascending: false });
     setRules((data ?? []) as CategorizeRule[]);
@@ -46,13 +46,13 @@ export function useCategorizeRules() {
   const add = useCallback(async (data: Omit<CategorizeRule, "id" | "user_id" | "created_at">) => {
     if (!user) return;
     const { error } = await supabase
-      .from("categorize_rules")
+      .from("categorize_rules" as any)
       .insert({ ...data, user_id: user.id });
     if (error) throw error;
   }, [user]);
 
   const remove = useCallback(async (id: string) => {
-    await supabase.from("categorize_rules").delete().eq("id", id);
+    await supabase.from("categorize_rules" as any).delete().eq("id", id);
   }, []);
 
   /** apply rules to a transaction; returns matched category or null */

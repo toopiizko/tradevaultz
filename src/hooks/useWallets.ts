@@ -40,7 +40,7 @@ export function useWallets() {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("wallets")
+      .from("wallets" as any)
       .select("*")
       .order("created_at", { ascending: true });
     setWallets((data ?? []) as Wallet[]);
@@ -60,7 +60,7 @@ export function useWallets() {
   const create = useCallback(async (data: Omit<Wallet, "id" | "user_id" | "created_at" | "updated_at" | "icon"> & { icon?: string | null }) => {
     if (!user) return null;
     const { data: created, error } = await supabase
-      .from("wallets")
+      .from("wallets" as any)
       .insert({ ...data, user_id: user.id })
       .select()
       .single();
@@ -69,12 +69,12 @@ export function useWallets() {
   }, [user]);
 
   const update = useCallback(async (id: string, patch: Partial<Wallet>) => {
-    const { error } = await supabase.from("wallets").update(patch).eq("id", id);
+    const { error } = await supabase.from("wallets" as any).update(patch).eq("id", id);
     if (error) throw error;
   }, []);
 
   const remove = useCallback(async (id: string) => {
-    const { error } = await supabase.from("wallets").delete().eq("id", id);
+    const { error } = await supabase.from("wallets" as any).delete().eq("id", id);
     if (error) throw error;
     if (activeId === id) setActiveId(ALL_WALLETS);
   }, [activeId, setActiveId]);
