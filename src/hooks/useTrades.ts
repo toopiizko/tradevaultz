@@ -31,7 +31,7 @@ export function useTrades() {
     refresh();
     if (!user) return;
     const channel = supabase
-      .channel("trades-changes")
+      .channel(`trades-changes-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "trades" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(channel); };

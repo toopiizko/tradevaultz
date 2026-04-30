@@ -37,7 +37,7 @@ export function useCategorizeRules() {
     refresh();
     if (!user) return;
     const ch = supabase
-      .channel("categorize_rules-changes")
+      .channel(`categorize_rules-changes-${user.id}-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "categorize_rules" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };

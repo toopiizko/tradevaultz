@@ -23,7 +23,7 @@ export function useExpenses() {
     refresh();
     if (!user) return;
     const channel = supabase
-      .channel("expenses-changes")
+      .channel(`expenses-changes-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(channel); };

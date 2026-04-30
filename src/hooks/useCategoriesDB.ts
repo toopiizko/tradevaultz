@@ -36,7 +36,7 @@ export function useCategoriesDB() {
     refresh();
     if (!user) return;
     const ch = supabase
-      .channel("expense_categories-changes")
+      .channel(`expense_categories-changes-${user.id}-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
