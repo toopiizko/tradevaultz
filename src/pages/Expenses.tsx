@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Info,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
