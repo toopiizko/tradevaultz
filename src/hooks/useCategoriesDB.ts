@@ -40,7 +40,8 @@ export function useCategoriesDB() {
       .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user?.id, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const customIncome = rows.filter((r) => r.type === "income").map((r) => r.name);
   const customExpense = rows.filter((r) => r.type === "expense").map((r) => r.name);
