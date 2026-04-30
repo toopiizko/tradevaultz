@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      categorize_rules: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          match_type: string
+          pattern: string
+          priority: number
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          match_type: string
+          pattern: string
+          priority?: number
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          match_type?: string
+          pattern?: string
+          priority?: number
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expense_categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -150,6 +216,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wallets: {
+        Row: {
+          color: string
+          created_at: string
+          currency: string
+          description: string | null
+          icon: string | null
+          id: string
+          initial_balance: number
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
