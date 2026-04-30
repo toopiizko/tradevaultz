@@ -5,6 +5,7 @@ import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { PortfolioSwitcher } from "@/components/PortfolioSwitcher";
+import { WalletSwitcher } from "@/components/WalletSwitcher";
 import { useState } from "react";
 
 const tradingNav = [
@@ -52,6 +53,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const isExpensesArea = location.pathname.startsWith("/expenses");
 
   // Bottom bar: Dashboard, Trades | FAB | Expenses, P&L Calendar (Calculator removed per user request)
   const bottomNav = [
@@ -91,8 +93,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
 
         <div className="px-3 pt-3">
-          <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">Portfolio</p>
-          <PortfolioSwitcher />
+          <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            {isExpensesArea ? "Wallet" : "Portfolio"}
+          </p>
+          {isExpensesArea ? <WalletSwitcher /> : <PortfolioSwitcher />}
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -120,7 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex-1 min-w-0 flex justify-center">
-          <PortfolioSwitcher compact />
+          {isExpensesArea ? <WalletSwitcher compact /> : <PortfolioSwitcher compact />}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">

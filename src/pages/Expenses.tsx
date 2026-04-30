@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Info,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -444,7 +444,17 @@ export default function Expenses() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--primary) / 0.4)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: "hsl(var(--popover-foreground))",
+                      boxShadow: "0 4px 16px hsl(var(--primary) / 0.15)",
+                    }}
+                    itemStyle={{ color: "hsl(var(--popover-foreground))" }}
+                    labelStyle={{ color: "hsl(var(--popover-foreground))" }}
                     formatter={(v: any, _n: any, p: any) => [
                       `${formatMoney(Number(v), currency)} (${p.payload.pct.toFixed(1)}%)`,
                       p.payload.name,
@@ -515,54 +525,72 @@ export default function Expenses() {
             const w = walletOf((e as any).wallet_id);
             return (
               <li key={e.id} className="px-3 py-2.5">
-                <HoverCard openDelay={120} closeDelay={80}>
-                  <HoverCardTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <button className="w-full flex items-center gap-2 text-left">
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
-                      <span className="flex-1 min-w-0 text-sm truncate">
-                        {e.description || <span className="text-muted-foreground italic">No note</span>}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">
+                          {e.description || <span className="text-muted-foreground italic">No note</span>}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {format(new Date(e.expense_date), "MMM dd, yyyy")}
+                        </p>
+                      </div>
                       <span className={`text-sm font-bold shrink-0 ${e.type === "income" ? "text-success" : "text-destructive"}`}>
                         {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
                       </span>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     </button>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-72 text-xs space-y-2">
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="bottom"
+                    align="end"
+                    className="w-72 text-xs space-y-2 border-primary/30 shadow-[0_8px_24px_hsl(var(--primary)/0.15)]"
+                  >
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Date</span>
                       <span className="font-medium">{format(new Date(e.expense_date), "MMM dd, yyyy")}</span>
                     </div>
                     <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className={`font-medium ${e.type === "income" ? "text-success" : "text-destructive"}`}>
+                        {e.type === "income" ? "Income" : "Expense"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">Category</span>
                       <Select value={e.category} onValueChange={(v) => handleUpdateCategory(e.id, v)}>
-                        <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-7 text-xs w-[140px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {(e.type === "income" ? categories.income : categories.expense).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">Wallet</span>
                       <Select value={(e as any).wallet_id ?? "none"} onValueChange={(v) => handleUpdateWallet(e.id, v === "none" ? null : v)}>
-                        <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectTrigger className="h-7 text-xs w-[140px]">
+                          {w ? (
+                            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: w.color }} />{w.name}</span>
+                          ) : <span className="text-muted-foreground">None</span>}
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                          {wallets.map((wx) => <SelectItem key={wx.id} value={wx.id}>{wx.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     {e.description && (
                       <div>
                         <p className="text-muted-foreground mb-1">Note</p>
-                        <p className="text-foreground">{e.description}</p>
+                        <p className="text-foreground break-words">{e.description}</p>
                       </div>
                     )}
                     <Button size="sm" variant="ghost" className="w-full text-destructive gap-2" onClick={() => handleDelete(e.id)}>
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </Button>
-                  </HoverCardContent>
-                </HoverCard>
+                  </PopoverContent>
+                </Popover>
               </li>
             );
           })}
