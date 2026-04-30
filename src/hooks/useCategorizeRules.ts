@@ -41,7 +41,8 @@ export function useCategorizeRules() {
       .on("postgres_changes", { event: "*", schema: "public", table: "categorize_rules" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user?.id, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const add = useCallback(async (data: Omit<CategorizeRule, "id" | "user_id" | "created_at">) => {
     if (!user) return;
