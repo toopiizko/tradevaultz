@@ -55,7 +55,8 @@ export function useWallets() {
       .on("postgres_changes", { event: "*", schema: "public", table: "wallets" }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user?.id, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const create = useCallback(async (data: Omit<Wallet, "id" | "user_id" | "created_at" | "updated_at" | "icon"> & { icon?: string | null }) => {
     if (!user) return null;
