@@ -444,7 +444,17 @@ export default function Expenses() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--primary) / 0.4)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: "hsl(var(--popover-foreground))",
+                      boxShadow: "0 4px 16px hsl(var(--primary) / 0.15)",
+                    }}
+                    itemStyle={{ color: "hsl(var(--popover-foreground))" }}
+                    labelStyle={{ color: "hsl(var(--popover-foreground))" }}
                     formatter={(v: any, _n: any, p: any) => [
                       `${formatMoney(Number(v), currency)} (${p.payload.pct.toFixed(1)}%)`,
                       p.payload.name,
