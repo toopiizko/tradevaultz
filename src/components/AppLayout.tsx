@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon, Briefcase, CalendarDays } from "lucide-react";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon, CalendarDays } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -8,24 +8,23 @@ import { PortfolioSwitcher } from "@/components/PortfolioSwitcher";
 import { WalletSwitcher } from "@/components/WalletSwitcher";
 import { useState } from "react";
 
-const tradingNav = [
+const portfolioNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/trades", label: "Trade History", icon: BookOpen },
+  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
   { to: "/calculator", label: "Calculator", icon: Calculator },
 ];
 
-const moneyNav = [
-  { to: "/expenses", label: "Expenses", icon: Wallet },
-  { to: "/expenses/calendar", label: "Expense Calendar", icon: CalendarDays },
-];
-
-const insightsNav = [
-  { to: "/calendar", label: "P&L Calendar", icon: Calendar },
-  { to: "/portfolios", label: "Portfolios", icon: Briefcase },
+const insightNav = [
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 
-const allNav = [...tradingNav, ...moneyNav, ...insightsNav];
+const expenseNav = [
+  { to: "/expenses", label: "Expense Dashboard", icon: Wallet },
+  { to: "/expenses/calendar", label: "Expense Calendar", icon: CalendarDays },
+];
+
+const allNav = [...portfolioNav, ...insightNav, ...expenseNav];
 
 function NavItem({ to, label, icon: Icon, onClick }: any) {
   return (
@@ -55,7 +54,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const isExpensesArea = location.pathname.startsWith("/expenses");
 
-  // Bottom bar: Dashboard, Trades | FAB | Expenses, P&L Calendar (Calculator removed per user request)
+  // Bottom bar: Dashboard, Trades | FAB | Expenses, P&L Calendar
   const bottomNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/trades", label: "Trades", icon: BookOpen },
@@ -65,9 +64,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const leftNav = bottomNav.slice(0, 2);
   const rightNav = bottomNav.slice(2);
 
-  const handleAddTrade = () => {
-    // Navigate to trades and signal to open the dialog
-    navigate("/trades?new=1");
+  // Context-aware FAB: in expenses area trigger Add Expense, otherwise Add Trade
+  const handleFab = () => {
+    if (isExpensesArea) navigate("/expenses?new=1");
+    else navigate("/trades?new=1");
   };
 
   return (
@@ -100,12 +100,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Trading</p>
-          {tradingNav.map((item) => <NavItem key={item.to} {...item} />)}
-          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Money</p>
-          {moneyNav.map((item) => <NavItem key={item.to} {...item} />)}
-          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Insights</p>
-          {insightsNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Portfolio</p>
+          {portfolioNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Insight</p>
+          {insightNav.map((item) => <NavItem key={item.to} {...item} />)}
+          <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">Expense</p>
+          {expenseNav.map((item) => <NavItem key={item.to} {...item} />)}
         </nav>
 
         <div className="p-3 border-t border-border/60">
