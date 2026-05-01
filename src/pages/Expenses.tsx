@@ -621,28 +621,65 @@ export default function Expenses() {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="glass-card rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="text-sm font-medium">{selectedIds.size} selected</div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setBulkEditOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setConfirmBulkDelete(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* History */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between">
-          <h2 className="font-semibold text-sm">History</h2>
-          <span className="text-xs text-muted-foreground">{range.label}</span>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={filteredHistory.length > 0 && selectedIds.size === filteredHistory.length}
+              onCheckedChange={(c) => toggleSelectAll(!!c)}
+              aria-label="Select all"
+            />
+            <h2 className="font-semibold text-sm">History</h2>
+            {categoryFilter.size > 0 && (
+              <span className="text-[11px] text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                {categoryFilter.size} category filter
+                <button onClick={() => setCategoryFilter(new Set())}><X className="h-3 w-3" /></button>
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground">{filteredHistory.length} · {range.label}</span>
         </div>
 
         {/* Mobile compact list */}
         <ul className="lg:hidden divide-y divide-border/40">
           {loading && <li className="py-12 text-center text-muted-foreground text-sm">Loading…</li>}
-          {!loading && filteredAll.length === 0 && <li className="py-12 text-center text-muted-foreground text-sm">No transactions</li>}
-          {filteredAll.map((e) => {
+          {!loading && filteredHistory.length === 0 && <li className="py-12 text-center text-muted-foreground text-sm">No transactions</li>}
+          {filteredHistory.map((e) => {
             const w = walletOf((e as any).wallet_id);
+            const imgs = (((e as any).image_urls ?? []) as string[]);
+            const isSel = selectedIds.has(e.id);
             return (
-              <li key={e.id} className="px-3 py-2.5">
+              <li key={e.id} className={`px-3 py-2.5 flex items-center gap-2 ${isSel ? "bg-primary/5" : ""}`}>
+                <Checkbox
+                  checked={isSel}
+                  onCheckedChange={(c) => toggleSelect(e.id, !!c)}
+                  aria-label="Select"
+                />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full flex items-center gap-2 text-left">
+                    <button className="flex-1 flex items-center gap-2 text-left">
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">
+                        <p className="text-sm truncate flex items-center gap-1.5">
                           {e.description || <span className="text-muted-foreground italic">No note</span>}
+                          <ImageBadge count={imgs.length} />
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {format(new Date(e.expense_date), "MMM dd, yyyy")}
@@ -656,17 +693,11 @@ export default function Expenses() {
                   <PopoverContent
                     side="bottom"
                     align="end"
-                    className="w-72 text-xs space-y-2 border-primary/30 shadow-[0_8px_24px_hsl(var(--primary)/0.15)]"
+                    className="w-80 text-xs space-y-2 border-primary/30 shadow-[0_8px_24px_hsl(var(--primary)/0.15)]"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Date</span>
                       <span className="font-medium">{format(new Date(e.expense_date), "MMM dd, yyyy")}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className={`font-medium ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                        {e.type === "income" ? "Income" : "Expense"}
-                      </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">Category</span>
@@ -697,6 +728,10 @@ export default function Expenses() {
                         <p className="text-foreground break-words">{e.description}</p>
                       </div>
                     )}
+                    <div>
+                      <p className="text-muted-foreground mb-1">Attachments</p>
+                      <ImageAttachments kind="expense" recordId={e.id} paths={imgs} compact />
+                    </div>
                     <Button size="sm" variant="ghost" className="w-full text-destructive gap-2" onClick={() => handleDelete(e.id)}>
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </Button>
@@ -712,18 +747,30 @@ export default function Expenses() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
-                {["Date", "Type", "Category", "Wallet", "Description", "Amount", ""].map((h) => (
+                <th className="px-3 py-2.5 w-10">
+                  <Checkbox
+                    checked={filteredHistory.length > 0 && selectedIds.size === filteredHistory.length}
+                    onCheckedChange={(c) => toggleSelectAll(!!c)}
+                    aria-label="Select all"
+                  />
+                </th>
+                {["Date", "Type", "Category", "Wallet", "Description", "Files", "Amount", ""].map((h) => (
                   <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
-              {!loading && filteredAll.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No transactions</td></tr>}
-              {filteredAll.map((e) => {
+              {loading && <tr><td colSpan={9} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
+              {!loading && filteredHistory.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-muted-foreground">No transactions</td></tr>}
+              {filteredHistory.map((e) => {
                 const w = walletOf((e as any).wallet_id);
+                const imgs = (((e as any).image_urls ?? []) as string[]);
+                const isSel = selectedIds.has(e.id);
                 return (
-                  <tr key={e.id} className="border-b border-border/40 hover:bg-secondary/30">
+                  <tr key={e.id} className={`border-b border-border/40 hover:bg-secondary/30 ${isSel ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-2.5">
+                      <Checkbox checked={isSel} onCheckedChange={(c) => toggleSelect(e.id, !!c)} aria-label="Select" />
+                    </td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</td>
                     <td className="px-3 py-2.5">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
@@ -752,6 +799,20 @@ export default function Expenses() {
                       </Select>
                     </td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                    <td className="px-3 py-2.5">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                            <ImageBadge count={imgs.length} />
+                            {imgs.length === 0 && <Upload className="h-3.5 w-3.5" />}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <p className="text-xs font-medium mb-2">Attachments</p>
+                          <ImageAttachments kind="expense" recordId={e.id} paths={imgs} />
+                        </PopoverContent>
+                      </Popover>
+                    </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
                       {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
                     </td>
@@ -765,6 +826,86 @@ export default function Expenses() {
           </table>
         </div>
       </div>
+
+      {/* Category breakdown panel — appears when filtering categories */}
+      {categoryFilter.size > 0 && (
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Breakdown · {categoryFilter.size} category</h3>
+            <span className="text-xs text-muted-foreground">{filteredHistory.length} txns</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {Array.from(categoryFilter).map((cat) => {
+              const items = filteredHistory.filter((e) => e.category === cat);
+              const total = items.reduce((s, e) => s + (e.type === "expense" ? Number(e.amount) : -Number(e.amount)), 0);
+              return (
+                <div key={cat} className="rounded-lg border border-border/40 p-3">
+                  <p className="text-sm font-semibold">{cat}</p>
+                  <p className="text-xs text-muted-foreground">{items.length} transactions</p>
+                  <p className={`text-lg font-bold mt-1 ${total >= 0 ? "text-destructive" : "text-success"}`}>
+                    {display(Math.abs(total))}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk edit dialog */}
+      <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit {selectedIds.size} transactions</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Leave a field empty to keep its current value.</p>
+          <div className="space-y-3">
+            <div>
+              <Label>Category</Label>
+              <Select value={bulkCategory || "__keep"} onValueChange={(v) => setBulkCategory(v === "__keep" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__keep">— Keep existing —</SelectItem>
+                  {categories.expense.map((c) => <SelectItem key={"e-" + c} value={c}>{c} (expense)</SelectItem>)}
+                  {categories.income.map((c) => <SelectItem key={"i-" + c} value={c}>{c} (income)</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Wallet</Label>
+              <Select value={bulkWallet || "__keep"} onValueChange={(v) => setBulkWallet(v === "__keep" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__keep">— Keep existing —</SelectItem>
+                  <SelectItem value="none">No wallet</SelectItem>
+                  {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkEdit} style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+              Apply to {selectedIds.size}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} transactions?</AlertDialogTitle>
+            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import currency dialog */}
       <Dialog open={importCurrencyOpen} onOpenChange={(o) => { if (!o) { setPendingFile(null); } setImportCurrencyOpen(o); }}>
