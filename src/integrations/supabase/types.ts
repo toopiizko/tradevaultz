@@ -88,6 +88,7 @@ export type Database = {
           description: string | null
           expense_date: string
           id: string
+          image_urls: string[]
           type: string
           updated_at: string
           user_id: string
@@ -100,6 +101,7 @@ export type Database = {
           description?: string | null
           expense_date?: string
           id?: string
+          image_urls?: string[]
           type?: string
           updated_at?: string
           user_id: string
@@ -112,6 +114,7 @@ export type Database = {
           description?: string | null
           expense_date?: string
           id?: string
+          image_urls?: string[]
           type?: string
           updated_at?: string
           user_id?: string
@@ -163,6 +166,7 @@ export type Database = {
           entry_price: number
           exit_price: number
           id: string
+          image_urls: string[]
           note: string | null
           pnl: number
           portfolio_id: string | null
@@ -180,6 +184,7 @@ export type Database = {
           entry_price: number
           exit_price: number
           id?: string
+          image_urls?: string[]
           note?: string | null
           pnl?: number
           portfolio_id?: string | null
@@ -197,6 +202,7 @@ export type Database = {
           entry_price?: number
           exit_price?: number
           id?: string
+          image_urls?: string[]
           note?: string | null
           pnl?: number
           portfolio_id?: string | null
