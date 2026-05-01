@@ -116,7 +116,7 @@ export default function Expenses() {
   }>>([]);
   const [importFileName, setImportFileName] = useState("");
 
-  // Filter expenses by wallet + period
+  // Filter expenses by wallet + period (used for charts/totals)
   const range = useMemo(() => rangeFor(period, monthCursor), [period, monthCursor]);
   const filteredAll = useMemo(() => {
     return expenses.filter((e) => {
@@ -128,6 +128,12 @@ export default function Expenses() {
       return true;
     });
   }, [expenses, activeWalletId, range]);
+
+  // Apply category filter on top — used for the History list & breakdown only
+  const filteredHistory = useMemo(() => {
+    if (categoryFilter.size === 0) return filteredAll;
+    return filteredAll.filter((e) => categoryFilter.has(e.category));
+  }, [filteredAll, categoryFilter]);
 
   const totals = useMemo(() => {
     const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
