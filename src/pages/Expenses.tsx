@@ -221,6 +221,48 @@ export default function Expenses() {
     toast.success("Wallet updated");
   };
 
+  // Bulk operations
+  const toggleSelect = (id: string, on: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (on: boolean) => {
+    setSelectedIds(on ? new Set(filteredHistory.map((e) => e.id)) : new Set());
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const { error } = await supabase.from("expenses").delete().in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${ids.length}`);
+    clearSelection();
+    setConfirmBulkDelete(false);
+  };
+
+  const handleBulkEdit = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const patch: any = {};
+    if (bulkCategory) patch.category = bulkCategory;
+    if (bulkWallet) patch.wallet_id = bulkWallet === "none" ? null : bulkWallet;
+    if (!Object.keys(patch).length) {
+      setBulkEditOpen(false);
+      return;
+    }
+    const { error } = await supabase.from("expenses").update(patch).in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Updated ${ids.length}`);
+    clearSelection();
+    setBulkEditOpen(false);
+    setBulkCategory("");
+    setBulkWallet("");
+  };
+
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
