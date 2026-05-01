@@ -1,23 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useExpenses } from "@/hooks/useExpenses";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useCategoriesDB } from "@/hooks/useCategoriesDB";
 import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
 import { useCategorizeRules } from "@/hooks/useCategorizeRules";
+import { useCurrency } from "@/lib/currency-context";
 import { CategoryManager } from "@/components/CategoryManager";
 import { WalletManager } from "@/components/WalletManager";
 import { RulesManager } from "@/components/RulesManager";
-import { getUsdThbRate, formatMoney } from "@/lib/currency";
+import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
+import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -63,12 +71,30 @@ export default function Expenses() {
   const { apply: applyRules } = useCategorizeRules();
 
   const [open, setOpen] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "THB">("USD");
-  const [rate, setRate] = useState(36);
+  const { currency, setCurrency, rate } = useCurrency();
   const [period, setPeriod] = useState<PeriodKey>("this-month");
   const [monthCursor, setMonthCursor] = useState(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => { getUsdThbRate().then(setRate); }, []);
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState<string>("");
+  const [bulkWallet, setBulkWallet] = useState<string>("");
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  // Category filter (multi-select)
+  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
+  const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null);
+
+  // Open dialog when ?new=1 (from bottom-bar FAB)
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setOpen(true);
+      searchParams.delete("new");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const [form, setForm] = useState({
     type: "expense" as "income" | "expense",
