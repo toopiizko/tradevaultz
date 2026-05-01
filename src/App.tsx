@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { PortfolioProvider } from "@/lib/portfolio";
+import { CurrencyProvider } from "@/lib/currency-context";
 import Protected from "@/components/Protected";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -29,6 +30,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <PortfolioProvider>
+              <CurrencyProvider>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<Protected><Index /></Protected>} />
@@ -41,6 +43,7 @@ const App = () => (
                 <Route path="/portfolios" element={<Protected><Portfolios /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </CurrencyProvider>
             </PortfolioProvider>
           </AuthProvider>
         </BrowserRouter>

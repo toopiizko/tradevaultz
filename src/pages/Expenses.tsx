@@ -1,23 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useExpenses } from "@/hooks/useExpenses";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useCategoriesDB } from "@/hooks/useCategoriesDB";
 import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
 import { useCategorizeRules } from "@/hooks/useCategorizeRules";
+import { useCurrency } from "@/lib/currency-context";
 import { CategoryManager } from "@/components/CategoryManager";
 import { WalletManager } from "@/components/WalletManager";
 import { RulesManager } from "@/components/RulesManager";
-import { getUsdThbRate, formatMoney } from "@/lib/currency";
+import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
+import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -63,12 +71,30 @@ export default function Expenses() {
   const { apply: applyRules } = useCategorizeRules();
 
   const [open, setOpen] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "THB">("USD");
-  const [rate, setRate] = useState(36);
+  const { currency, setCurrency, rate } = useCurrency();
   const [period, setPeriod] = useState<PeriodKey>("this-month");
   const [monthCursor, setMonthCursor] = useState(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => { getUsdThbRate().then(setRate); }, []);
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState<string>("");
+  const [bulkWallet, setBulkWallet] = useState<string>("");
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  // Category filter (multi-select)
+  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
+  const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null);
+
+  // Open dialog when ?new=1 (from bottom-bar FAB)
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setOpen(true);
+      searchParams.delete("new");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const [form, setForm] = useState({
     type: "expense" as "income" | "expense",
@@ -90,7 +116,7 @@ export default function Expenses() {
   }>>([]);
   const [importFileName, setImportFileName] = useState("");
 
-  // Filter expenses by wallet + period
+  // Filter expenses by wallet + period (used for charts/totals)
   const range = useMemo(() => rangeFor(period, monthCursor), [period, monthCursor]);
   const filteredAll = useMemo(() => {
     return expenses.filter((e) => {
@@ -102,6 +128,12 @@ export default function Expenses() {
       return true;
     });
   }, [expenses, activeWalletId, range]);
+
+  // Apply category filter on top — used for the History list & breakdown only
+  const filteredHistory = useMemo(() => {
+    if (categoryFilter.size === 0) return filteredAll;
+    return filteredAll.filter((e) => categoryFilter.has(e.category));
+  }, [filteredAll, categoryFilter]);
 
   const totals = useMemo(() => {
     const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
@@ -187,6 +219,48 @@ export default function Expenses() {
     const { error } = await supabase.from("expenses").update({ wallet_id } as any).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Wallet updated");
+  };
+
+  // Bulk operations
+  const toggleSelect = (id: string, on: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (on: boolean) => {
+    setSelectedIds(on ? new Set(filteredHistory.map((e) => e.id)) : new Set());
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const { error } = await supabase.from("expenses").delete().in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${ids.length}`);
+    clearSelection();
+    setConfirmBulkDelete(false);
+  };
+
+  const handleBulkEdit = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const patch: any = {};
+    if (bulkCategory) patch.category = bulkCategory;
+    if (bulkWallet) patch.wallet_id = bulkWallet === "none" ? null : bulkWallet;
+    if (!Object.keys(patch).length) {
+      setBulkEditOpen(false);
+      return;
+    }
+    const { error } = await supabase.from("expenses").update(patch).in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`Updated ${ids.length}`);
+    clearSelection();
+    setBulkEditOpen(false);
+    setBulkCategory("");
+    setBulkWallet("");
   };
 
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -395,6 +469,43 @@ export default function Expenses() {
         <span className="ml-auto text-xs text-muted-foreground">{filteredAll.length} transactions</span>
       </div>
 
+      {/* Category filter chips */}
+      {categoryData.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <Filter className="h-3 w-3" /> Category
+          </span>
+          <button
+            onClick={() => setCategoryFilter(new Set())}
+            className={`px-2.5 py-1 text-[11px] rounded-full border transition ${
+              categoryFilter.size === 0 ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground/30 text-muted-foreground"
+            }`}
+          >All</button>
+          {categoryData.map((c, i) => {
+            const on = categoryFilter.has(c.name);
+            return (
+              <button
+                key={c.name}
+                onClick={() => {
+                  setCategoryFilter((prev) => {
+                    const next = new Set(prev);
+                    if (on) next.delete(c.name); else next.add(c.name);
+                    return next;
+                  });
+                }}
+                className={`px-2.5 py-1 text-[11px] rounded-full border transition flex items-center gap-1.5 ${
+                  on ? "bg-primary/15 border-primary text-primary" : "border-border hover:border-foreground/30"
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                {c.name}
+                <span className="text-muted-foreground">{c.pct.toFixed(0)}%</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-3 lg:gap-4">
         <div className="stat-card">
@@ -510,28 +621,65 @@ export default function Expenses() {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="glass-card rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="text-sm font-medium">{selectedIds.size} selected</div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setBulkEditOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setConfirmBulkDelete(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* History */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between">
-          <h2 className="font-semibold text-sm">History</h2>
-          <span className="text-xs text-muted-foreground">{range.label}</span>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={filteredHistory.length > 0 && selectedIds.size === filteredHistory.length}
+              onCheckedChange={(c) => toggleSelectAll(!!c)}
+              aria-label="Select all"
+            />
+            <h2 className="font-semibold text-sm">History</h2>
+            {categoryFilter.size > 0 && (
+              <span className="text-[11px] text-primary bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                {categoryFilter.size} category filter
+                <button onClick={() => setCategoryFilter(new Set())}><X className="h-3 w-3" /></button>
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground">{filteredHistory.length} · {range.label}</span>
         </div>
 
         {/* Mobile compact list */}
         <ul className="lg:hidden divide-y divide-border/40">
           {loading && <li className="py-12 text-center text-muted-foreground text-sm">Loading…</li>}
-          {!loading && filteredAll.length === 0 && <li className="py-12 text-center text-muted-foreground text-sm">No transactions</li>}
-          {filteredAll.map((e) => {
+          {!loading && filteredHistory.length === 0 && <li className="py-12 text-center text-muted-foreground text-sm">No transactions</li>}
+          {filteredHistory.map((e) => {
             const w = walletOf((e as any).wallet_id);
+            const imgs = (((e as any).image_urls ?? []) as string[]);
+            const isSel = selectedIds.has(e.id);
             return (
-              <li key={e.id} className="px-3 py-2.5">
+              <li key={e.id} className={`px-3 py-2.5 flex items-center gap-2 ${isSel ? "bg-primary/5" : ""}`}>
+                <Checkbox
+                  checked={isSel}
+                  onCheckedChange={(c) => toggleSelect(e.id, !!c)}
+                  aria-label="Select"
+                />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full flex items-center gap-2 text-left">
+                    <button className="flex-1 flex items-center gap-2 text-left">
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">
+                        <p className="text-sm truncate flex items-center gap-1.5">
                           {e.description || <span className="text-muted-foreground italic">No note</span>}
+                          <ImageBadge count={imgs.length} />
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {format(new Date(e.expense_date), "MMM dd, yyyy")}
@@ -545,17 +693,11 @@ export default function Expenses() {
                   <PopoverContent
                     side="bottom"
                     align="end"
-                    className="w-72 text-xs space-y-2 border-primary/30 shadow-[0_8px_24px_hsl(var(--primary)/0.15)]"
+                    className="w-80 text-xs space-y-2 border-primary/30 shadow-[0_8px_24px_hsl(var(--primary)/0.15)]"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Date</span>
                       <span className="font-medium">{format(new Date(e.expense_date), "MMM dd, yyyy")}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className={`font-medium ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                        {e.type === "income" ? "Income" : "Expense"}
-                      </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">Category</span>
@@ -586,6 +728,10 @@ export default function Expenses() {
                         <p className="text-foreground break-words">{e.description}</p>
                       </div>
                     )}
+                    <div>
+                      <p className="text-muted-foreground mb-1">Attachments</p>
+                      <ImageAttachments kind="expense" recordId={e.id} paths={imgs} compact />
+                    </div>
                     <Button size="sm" variant="ghost" className="w-full text-destructive gap-2" onClick={() => handleDelete(e.id)}>
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </Button>
@@ -601,18 +747,30 @@ export default function Expenses() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 border-b border-border/60">
               <tr className="text-left">
-                {["Date", "Type", "Category", "Wallet", "Description", "Amount", ""].map((h) => (
+                <th className="px-3 py-2.5 w-10">
+                  <Checkbox
+                    checked={filteredHistory.length > 0 && selectedIds.size === filteredHistory.length}
+                    onCheckedChange={(c) => toggleSelectAll(!!c)}
+                    aria-label="Select all"
+                  />
+                </th>
+                {["Date", "Type", "Category", "Wallet", "Description", "Files", "Amount", ""].map((h) => (
                   <th key={h} className="px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
-              {!loading && filteredAll.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No transactions</td></tr>}
-              {filteredAll.map((e) => {
+              {loading && <tr><td colSpan={9} className="py-12 text-center text-muted-foreground">Loading…</td></tr>}
+              {!loading && filteredHistory.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-muted-foreground">No transactions</td></tr>}
+              {filteredHistory.map((e) => {
                 const w = walletOf((e as any).wallet_id);
+                const imgs = (((e as any).image_urls ?? []) as string[]);
+                const isSel = selectedIds.has(e.id);
                 return (
-                  <tr key={e.id} className="border-b border-border/40 hover:bg-secondary/30">
+                  <tr key={e.id} className={`border-b border-border/40 hover:bg-secondary/30 ${isSel ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-2.5">
+                      <Checkbox checked={isSel} onCheckedChange={(c) => toggleSelect(e.id, !!c)} aria-label="Select" />
+                    </td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</td>
                     <td className="px-3 py-2.5">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
@@ -641,6 +799,20 @@ export default function Expenses() {
                       </Select>
                     </td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                    <td className="px-3 py-2.5">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                            <ImageBadge count={imgs.length} />
+                            {imgs.length === 0 && <Upload className="h-3.5 w-3.5" />}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <p className="text-xs font-medium mb-2">Attachments</p>
+                          <ImageAttachments kind="expense" recordId={e.id} paths={imgs} />
+                        </PopoverContent>
+                      </Popover>
+                    </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
                       {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
                     </td>
@@ -654,6 +826,86 @@ export default function Expenses() {
           </table>
         </div>
       </div>
+
+      {/* Category breakdown panel — appears when filtering categories */}
+      {categoryFilter.size > 0 && (
+        <div className="glass-card rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Breakdown · {categoryFilter.size} category</h3>
+            <span className="text-xs text-muted-foreground">{filteredHistory.length} txns</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {Array.from(categoryFilter).map((cat) => {
+              const items = filteredHistory.filter((e) => e.category === cat);
+              const total = items.reduce((s, e) => s + (e.type === "expense" ? Number(e.amount) : -Number(e.amount)), 0);
+              return (
+                <div key={cat} className="rounded-lg border border-border/40 p-3">
+                  <p className="text-sm font-semibold">{cat}</p>
+                  <p className="text-xs text-muted-foreground">{items.length} transactions</p>
+                  <p className={`text-lg font-bold mt-1 ${total >= 0 ? "text-destructive" : "text-success"}`}>
+                    {display(Math.abs(total))}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk edit dialog */}
+      <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit {selectedIds.size} transactions</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Leave a field empty to keep its current value.</p>
+          <div className="space-y-3">
+            <div>
+              <Label>Category</Label>
+              <Select value={bulkCategory || "__keep"} onValueChange={(v) => setBulkCategory(v === "__keep" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__keep">— Keep existing —</SelectItem>
+                  {categories.expense.map((c) => <SelectItem key={"e-" + c} value={c}>{c} (expense)</SelectItem>)}
+                  {categories.income.map((c) => <SelectItem key={"i-" + c} value={c}>{c} (income)</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Wallet</Label>
+              <Select value={bulkWallet || "__keep"} onValueChange={(v) => setBulkWallet(v === "__keep" ? "" : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__keep">— Keep existing —</SelectItem>
+                  <SelectItem value="none">No wallet</SelectItem>
+                  {wallets.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkEdit} style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>
+              Apply to {selectedIds.size}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} transactions?</AlertDialogTitle>
+            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import currency dialog */}
       <Dialog open={importCurrencyOpen} onOpenChange={(o) => { if (!o) { setPendingFile(null); } setImportCurrencyOpen(o); }}>
