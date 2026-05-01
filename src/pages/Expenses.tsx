@@ -469,6 +469,43 @@ export default function Expenses() {
         <span className="ml-auto text-xs text-muted-foreground">{filteredAll.length} transactions</span>
       </div>
 
+      {/* Category filter chips */}
+      {categoryData.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <Filter className="h-3 w-3" /> Category
+          </span>
+          <button
+            onClick={() => setCategoryFilter(new Set())}
+            className={`px-2.5 py-1 text-[11px] rounded-full border transition ${
+              categoryFilter.size === 0 ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground/30 text-muted-foreground"
+            }`}
+          >All</button>
+          {categoryData.map((c, i) => {
+            const on = categoryFilter.has(c.name);
+            return (
+              <button
+                key={c.name}
+                onClick={() => {
+                  setCategoryFilter((prev) => {
+                    const next = new Set(prev);
+                    if (on) next.delete(c.name); else next.add(c.name);
+                    return next;
+                  });
+                }}
+                className={`px-2.5 py-1 text-[11px] rounded-full border transition flex items-center gap-1.5 ${
+                  on ? "bg-primary/15 border-primary text-primary" : "border-border hover:border-foreground/30"
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                {c.name}
+                <span className="text-muted-foreground">{c.pct.toFixed(0)}%</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-3 lg:gap-4">
         <div className="stat-card">
