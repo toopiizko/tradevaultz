@@ -185,7 +185,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Center FAB */}
           <div className="flex justify-center">
             <button
-              onClick={handleAddTrade}
+              onClick={handleFab}
               aria-label="Add new trade"
               className="-mt-6 h-14 w-14 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-4 border-background transition-transform active:scale-95"
               style={{ background: "var(--gradient-primary)" }}
