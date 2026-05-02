@@ -398,7 +398,9 @@ export default function Trades() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</td>
                     <td className="px-3 py-2 font-semibold">
-                      {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : t.asset}
+                      {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : (
+                        <span className="inline-flex items-center gap-1.5">{t.asset}<ImageBadge count={((t as any).image_urls ?? []).length} /></span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       {isEdit ? (
