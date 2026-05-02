@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Target, DollarSign, Activity } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
+
+type Period = "7d" | "30d" | "90d" | "all";
+const PERIOD_LABELS: Record<Period, string> = { "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days", "all": "All time" };
 
 function StatCard({ label, value, icon: Icon, accent, sub }: any) {
   return (
@@ -22,7 +25,15 @@ function StatCard({ label, value, icon: Icon, accent, sub }: any) {
 }
 
 export default function Dashboard() {
-  const { trades, loading } = useTrades();
+  const { trades: allTrades, loading } = useTrades();
+  const [period, setPeriod] = useState<Period>("30d");
+
+  const trades = useMemo(() => {
+    if (period === "all") return allTrades;
+    const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
+    const cutoff = subDays(new Date(), days);
+    return allTrades.filter((t) => new Date(t.trade_date) >= cutoff);
+  }, [allTrades, period]);
 
   const stats = useMemo(() => {
     const closed = trades;
@@ -96,9 +107,24 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Performance at a glance</p>
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Performance · {PERIOD_LABELS[period]}</p>
+        </div>
+        <div className="flex rounded-lg border border-border bg-secondary/50 p-0.5">
+          {(["7d", "30d", "90d", "all"] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p === "all" ? "All" : p.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -138,7 +164,7 @@ export default function Dashboard() {
         <div className="h-72">
           {equityCurve.length === 0 ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              {loading ? "Loading..." : "No trades yet — log your first trade!"}
+              {loading ? "Loading..." : "No trades in this period"}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -178,7 +204,7 @@ export default function Dashboard() {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="pnl" name="P&L ($)" radius={[6, 6, 0, 0]}>
                   {strategyData.map((d, i) => (
-                    <rect key={i} fill={d.pnl >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"} />
+                    <Cell key={i} fill={d.pnl >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"} />
                   ))}
                 </Bar>
               </BarChart>
