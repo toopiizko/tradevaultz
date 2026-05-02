@@ -597,6 +597,21 @@ export default function Trades() {
               <Label>Note</Label>
               <Textarea value={editDraft.note ?? ""} onChange={(e) => setEditDraft({ ...editDraft, note: e.target.value })} rows={3} />
             </div>
+            {editingId && (
+              <div>
+                <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Images</Label>
+                <ImageAttachments
+                  kind="trade"
+                  recordId={editingId}
+                  paths={(editDraft as any).image_urls ?? []}
+                  onChange={async (next) => {
+                    setEditDraft({ ...editDraft, image_urls: next } as any);
+                    await supabase.from("trades").update({ image_urls: next } as any).eq("id", editingId);
+                    refresh();
+                  }}
+                />
+              </div>
+            )}
             <Button onClick={saveEdit} className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save Changes</Button>
           </div>
         </DialogContent>
