@@ -86,7 +86,7 @@ function WalletForm({
 }
 
 export function WalletManager({ trigger }: { trigger?: React.ReactNode }) {
-  const { wallets, create, update, remove, activeId, setActiveId } = useWallets();
+  const { wallets, create, update, remove, activeId, setActiveId, balanceOf } = useWallets();
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Wallet | null>(null);
