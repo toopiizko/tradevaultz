@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download, Image as ImageIcon } from "lucide-react";
+import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
