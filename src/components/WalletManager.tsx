@@ -156,10 +156,15 @@ export function WalletManager({ trigger }: { trigger?: React.ReactNode }) {
               }`}>
                 <button onClick={() => setActiveId(w.id)} className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
                   <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: w.color }} />
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{w.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-sm truncate">{w.name}</p>
+                      <p className={`text-sm font-bold tabular-nums shrink-0 ${balanceOf(w.id) >= 0 ? "text-success" : "text-destructive"}`}>
+                        {balanceOf(w.id).toLocaleString(undefined, { maximumFractionDigits: 2 })} {w.currency}
+                      </p>
+                    </div>
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {w.currency} · Initial {Number(w.initial_balance).toLocaleString()}
+                      Initial {Number(w.initial_balance).toLocaleString()}
                       {w.description ? ` · ${w.description}` : ""}
                     </p>
                   </div>
