@@ -486,7 +486,10 @@ export default function Trades() {
                 >
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{t.asset}</div>
+                    <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                      {t.asset}
+                      <ImageBadge count={((t as any).image_urls ?? []).length} />
+                    </div>
                     <div className="text-[10px] text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</div>
                   </div>
                 </button>
