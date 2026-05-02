@@ -11,6 +11,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 import { WalletManager } from "@/components/WalletManager";
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
+import { SlipUploader } from "@/components/SlipUploader";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -377,6 +378,7 @@ export default function Expenses() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
             <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
+          <SlipUploader />
           <WalletManager />
           <CategoryManager />
           <RulesManager />
