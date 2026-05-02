@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useExpenses } from "@/hooks/useExpenses";
 
 export type Wallet = {
   id: string;
@@ -20,6 +21,7 @@ export const ALL_WALLETS = "__all_wallets__";
 
 export function useWallets() {
   const { user } = useAuth();
+  const { expenses } = useExpenses();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveIdState] = useState<string>(() => {
@@ -51,8 +53,8 @@ export function useWallets() {
     refresh();
     if (!user) return;
     const ch = supabase
-      .channel(`wallets-changes-${user.id}-${Math.random().toString(36).slice(2, 9)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "wallets" }, () => refresh())
+      .channel(`wallets-changes-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wallets", filter: `user_id=eq.${user.id}` }, () => refresh())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,7 +82,24 @@ export function useWallets() {
     if (activeId === id) setActiveId(ALL_WALLETS);
   }, [activeId, setActiveId]);
 
+  /** Map of wallet_id → current balance (initial + income − expense, in USD base). */
+  const balances = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const w of wallets) m.set(w.id, Number(w.initial_balance) || 0);
+    for (const e of expenses) {
+      const wid = (e as any).wallet_id as string | null | undefined;
+      if (!wid) continue;
+      const cur = m.get(wid);
+      if (cur === undefined) continue;
+      const amt = Number(e.amount) || 0;
+      m.set(wid, e.type === "income" ? cur + amt : cur - amt);
+    }
+    return m;
+  }, [wallets, expenses]);
+
+  const balanceOf = useCallback((id: string) => balances.get(id) ?? 0, [balances]);
+
   const active = activeId === ALL_WALLETS ? null : wallets.find((w) => w.id === activeId) ?? null;
 
-  return { wallets, loading, activeId, setActiveId, active, refresh, create, update, remove };
+  return { wallets, loading, activeId, setActiveId, active, refresh, create, update, remove, balances, balanceOf };
 }
