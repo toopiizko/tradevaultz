@@ -519,6 +519,21 @@ export default function Trades() {
                       <div className="col-span-2 text-foreground/80">{t.note}</div>
                     </>
                   )}
+                  <div className="col-span-2 mt-2">
+                    <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" /> Images
+                    </div>
+                    <ImageAttachments
+                      kind="trade"
+                      recordId={t.id}
+                      paths={(t as any).image_urls ?? []}
+                      onChange={async (next) => {
+                        await supabase.from("trades").update({ image_urls: next } as any).eq("id", t.id);
+                        refresh();
+                      }}
+                      compact
+                    />
+                  </div>
                   <div className="col-span-2 flex justify-end gap-2 mt-2">
                     <Button size="sm" variant="outline" className="h-8" onClick={() => { startEdit(t); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
