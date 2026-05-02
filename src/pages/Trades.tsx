@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Upload, Download, Image as ImageIcon } from "lucide-react";
+import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -397,7 +398,9 @@ export default function Trades() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</td>
                     <td className="px-3 py-2 font-semibold">
-                      {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : t.asset}
+                      {isEdit ? <Input className="h-8 w-24" value={editDraft.asset ?? ""} onChange={(e) => setEditDraft({ ...editDraft, asset: e.target.value })} /> : (
+                        <span className="inline-flex items-center gap-1.5">{t.asset}<ImageBadge count={((t as any).image_urls ?? []).length} /></span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       {isEdit ? (
@@ -485,7 +488,10 @@ export default function Trades() {
                 >
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{t.asset}</div>
+                    <div className="font-semibold text-sm truncate flex items-center gap-1.5">
+                      {t.asset}
+                      <ImageBadge count={((t as any).image_urls ?? []).length} />
+                    </div>
                     <div className="text-[10px] text-muted-foreground">{format(new Date(t.trade_date), "MMM dd, HH:mm")}</div>
                   </div>
                 </button>
@@ -518,6 +524,21 @@ export default function Trades() {
                       <div className="col-span-2 text-foreground/80">{t.note}</div>
                     </>
                   )}
+                  <div className="col-span-2 mt-2">
+                    <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" /> Images
+                    </div>
+                    <ImageAttachments
+                      kind="trade"
+                      recordId={t.id}
+                      paths={(t as any).image_urls ?? []}
+                      onChange={async (next) => {
+                        await supabase.from("trades").update({ image_urls: next } as any).eq("id", t.id);
+                        refresh();
+                      }}
+                      compact
+                    />
+                  </div>
                   <div className="col-span-2 flex justify-end gap-2 mt-2">
                     <Button size="sm" variant="outline" className="h-8" onClick={() => { startEdit(t); }}>
                       <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
@@ -578,6 +599,21 @@ export default function Trades() {
               <Label>Note</Label>
               <Textarea value={editDraft.note ?? ""} onChange={(e) => setEditDraft({ ...editDraft, note: e.target.value })} rows={3} />
             </div>
+            {editingId && (
+              <div>
+                <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Images</Label>
+                <ImageAttachments
+                  kind="trade"
+                  recordId={editingId}
+                  paths={(editDraft as any).image_urls ?? []}
+                  onChange={async (next) => {
+                    setEditDraft({ ...editDraft, image_urls: next } as any);
+                    await supabase.from("trades").update({ image_urls: next } as any).eq("id", editingId);
+                    refresh();
+                  }}
+                />
+              </div>
+            )}
             <Button onClick={saveEdit} className="w-full font-semibold" style={{ background: "var(--gradient-primary)", color: "hsl(var(--primary-foreground))" }}>Save Changes</Button>
           </div>
         </DialogContent>

@@ -1,21 +1,19 @@
 import { useMemo, useState } from "react";
 import { useExpenses } from "@/hooks/useExpenses";
-import { getUsdThbRate, formatMoney } from "@/lib/currency";
+import { formatMoney } from "@/lib/currency";
+import { useCurrency } from "@/lib/currency-context";
 import { ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import {
   addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format,
   isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
-import { useEffect } from "react";
 
 export default function ExpenseCalendar() {
   const { expenses, loading } = useExpenses();
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState<Date | null>(new Date());
-  const [currency, setCurrency] = useState<"USD" | "THB">("USD");
-  const [rate, setRate] = useState(36);
+  const { currency, setCurrency, rate } = useCurrency();
 
-  useEffect(() => { getUsdThbRate().then(setRate); }, []);
   const conv = (usd: number) => currency === "THB" ? usd * rate : usd;
   const fmt = (usd: number) => formatMoney(conv(usd), currency);
 
