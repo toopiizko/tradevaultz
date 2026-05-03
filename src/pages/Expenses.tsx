@@ -804,7 +804,9 @@ export default function Expenses() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs">
+                      <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} className="min-h-[28px] py-1" />
+                    </td>
                     <td className="px-3 py-2.5">
                       <Popover>
                         <PopoverTrigger asChild>
