@@ -260,5 +260,6 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
