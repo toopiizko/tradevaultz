@@ -11,6 +11,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 // WalletManager moved into the WalletSwitcher dropdown in the top bar
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
+import { NoteEditor } from "@/components/NoteEditor";
 import { SlipUploader } from "@/components/SlipUploader";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -220,6 +221,12 @@ export default function Expenses() {
     const { error } = await supabase.from("expenses").update({ wallet_id } as any).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Wallet updated");
+  };
+
+  const handleUpdateNote = async (id: string, description: string) => {
+    const { error } = await supabase.from("expenses").update({ description: description || null }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Note updated");
   };
 
   // Bulk operations
@@ -723,12 +730,10 @@ export default function Expenses() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {e.description && (
-                      <div>
-                        <p className="text-muted-foreground mb-1">Note</p>
-                        <p className="text-foreground break-words">{e.description}</p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-muted-foreground mb-1">Note</p>
+                      <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} />
+                    </div>
                     <div>
                       <p className="text-muted-foreground mb-1">Attachments</p>
                       <ImageAttachments kind="expense" recordId={e.id} paths={imgs} compact />
@@ -799,7 +804,9 @@ export default function Expenses() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs truncate">{e.description}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-xs">
+                      <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} className="min-h-[28px] py-1" />
+                    </td>
                     <td className="px-3 py-2.5">
                       <Popover>
                         <PopoverTrigger asChild>
