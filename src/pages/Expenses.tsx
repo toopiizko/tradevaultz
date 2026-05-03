@@ -732,7 +732,7 @@ export default function Expenses() {
                     </div>
                     <div>
                       <p className="text-muted-foreground mb-1">Note</p>
-                      <NoteEditor value={e.description} onSave={(v) => handleUpdateNote(e.id, v)} />
+                      <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} />
                     </div>
                     <div>
                       <p className="text-muted-foreground mb-1">Attachments</p>
