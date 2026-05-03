@@ -730,12 +730,10 @@ export default function Expenses() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {e.description && (
-                      <div>
-                        <p className="text-muted-foreground mb-1">Note</p>
-                        <p className="text-foreground break-words">{e.description}</p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-muted-foreground mb-1">Note</p>
+                      <NoteEditor value={e.description} onSave={(v) => handleUpdateNote(e.id, v)} />
+                    </div>
                     <div>
                       <p className="text-muted-foreground mb-1">Attachments</p>
                       <ImageAttachments kind="expense" recordId={e.id} paths={imgs} compact />
