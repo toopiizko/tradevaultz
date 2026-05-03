@@ -11,6 +11,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 // WalletManager moved into the WalletSwitcher dropdown in the top bar
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
+import { NoteEditor } from "@/components/NoteEditor";
 import { SlipUploader } from "@/components/SlipUploader";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
