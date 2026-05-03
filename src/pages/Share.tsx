@@ -54,8 +54,20 @@ export default function Share() {
             ...(activeId !== ALL_WALLETS ? { wallet_id: activeId } as any : {}),
           };
         });
-        const { error: insErr } = await supabase.from("expenses").insert(rows as any);
+        const { data: inserted, error: insErr } = await supabase.from("expenses").insert(rows as any).select("id");
         if (insErr) throw insErr;
+        // Attach the shared image to each saved row
+        for (let i = 0; i < blobs.length; i++) {
+          const row = inserted?.[i];
+          const blob = blobs[i];
+          if (!row || !blob) continue;
+          const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
+          const key = `${user!.id}/expense/${row.id}/${Date.now()}-slip.${ext}`;
+          const up = await supabase.storage.from("transaction-images").upload(key, blob, { contentType: blob.type });
+          if (!up.error) {
+            await supabase.from("expenses").update({ image_urls: [key] } as any).eq("id", row.id);
+          }
+        }
         toast.success(`Saved ${rows.length} slip(s) from share`);
         navigate("/expenses", { replace: true });
       } catch (e: any) {
