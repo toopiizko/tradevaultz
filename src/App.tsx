@@ -42,6 +42,7 @@ const App = () => (
                 <Route path="/expenses/calendar" element={<Protected><ExpenseCalendar /></Protected>} />
                 <Route path="/news" element={<Protected><News /></Protected>} />
                 <Route path="/portfolios" element={<Protected><Portfolios /></Protected>} />
+                <Route path="/share" element={<Protected><Share /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </CurrencyProvider>
