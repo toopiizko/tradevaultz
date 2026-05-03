@@ -135,27 +135,25 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) { setOpen(false); setSlips([]); } else setOpen(o); }}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <label className="relative inline-flex">
+    <>
+      {trigger ?? (
+        <Button asChild variant="outline" size="sm" className="gap-1.5 relative overflow-hidden">
+          <label className="cursor-pointer">
+            <Receipt className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Slip</span>
             <input
               type="file"
               accept="image/*"
               multiple
-              capture="environment"
               onChange={handlePick}
               className="absolute inset-0 opacity-0 cursor-pointer"
               aria-label="Upload slip image"
             />
-            <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none">
-              <Receipt className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Slip</span>
-            </Button>
           </label>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) { setOpen(false); setSlips([]); } else setOpen(o); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" /> Review Parsed Slips
