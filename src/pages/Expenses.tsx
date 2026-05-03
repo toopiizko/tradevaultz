@@ -8,7 +8,7 @@ import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
 import { useCategorizeRules } from "@/hooks/useCategorizeRules";
 import { useCurrency } from "@/lib/currency-context";
 import { CategoryManager } from "@/components/CategoryManager";
-import { WalletManager } from "@/components/WalletManager";
+// WalletManager moved into the WalletSwitcher dropdown in the top bar
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { SlipUploader } from "@/components/SlipUploader";
@@ -379,7 +379,6 @@ export default function Expenses() {
             <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
           <SlipUploader />
-          <WalletManager />
           <CategoryManager />
           <RulesManager />
           <Dialog open={open} onOpenChange={setOpen}>
