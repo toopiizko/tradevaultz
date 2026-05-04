@@ -8,6 +8,7 @@ import { useCategorizeRules } from "@/hooks/useCategorizeRules";
 import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { compressImageBlob } from "@/lib/imageCompress";
 
 // Receives images shared from other apps via PWA Web Share Target.
 // SW stashes blobs in cache under /__share/<id>; this page reads them, runs OCR,
