@@ -13,6 +13,7 @@ import { useWallets, ALL_WALLETS } from "@/hooks/useWallets";
 import { useCategorizeRules } from "@/hooks/useCategorizeRules";
 import { useCurrency } from "@/lib/currency-context";
 import { format } from "date-fns";
+import { compressDataUrl } from "@/lib/imageCompress";
 
 type Slip = {
   type: "income" | "expense";
