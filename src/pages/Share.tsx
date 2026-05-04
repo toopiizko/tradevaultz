@@ -56,14 +56,14 @@ export default function Share() {
         });
         const { data: inserted, error: insErr } = await supabase.from("expenses").insert(rows as any).select("id");
         if (insErr) throw insErr;
-        // Attach the shared image to each saved row
+        // Compress + attach the shared image to each saved row
         for (let i = 0; i < blobs.length; i++) {
           const row = inserted?.[i];
           const blob = blobs[i];
           if (!row || !blob) continue;
-          const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
+          const { blob: small, ext } = await compressImageBlob(blob);
           const key = `${user!.id}/expense/${row.id}/${Date.now()}-slip.${ext}`;
-          const up = await supabase.storage.from("transaction-images").upload(key, blob, { contentType: blob.type });
+          const up = await supabase.storage.from("transaction-images").upload(key, small, { contentType: small.type });
           if (!up.error) {
             await supabase.from("expenses").update({ image_urls: [key] } as any).eq("id", row.id);
           }
