@@ -119,17 +119,18 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
       const { data: inserted, error } = await supabase.from("expenses").insert(rows as any).select("id");
       if (error) throw error;
 
-      // Upload slip image for each saved row → store paths in expenses.image_urls
+      // Compress + upload slip image for each saved row → store paths in expenses.image_urls
       for (let i = 0; i < picked.length; i++) {
         const s = picked[i];
         const row = inserted?.[i];
         if (!row || !s._previewUrl) continue;
         try {
-          const { blob, ext } = dataUrlToBlob(s._previewUrl);
+          const { blob, ext, bytes } = await compressDataUrl(s._previewUrl);
           const key = `${user.id}/expense/${row.id}/${Date.now()}-slip.${ext}`;
           const up = await supabase.storage.from("transaction-images").upload(key, blob, { contentType: blob.type, upsert: false });
           if (up.error) { console.warn("slip upload failed", up.error); continue; }
           await supabase.from("expenses").update({ image_urls: [key] } as any).eq("id", row.id);
+          console.log(`slip ${i} compressed → ${(bytes / 1024).toFixed(0)}KB`);
         } catch (e) { console.warn(e); }
       }
 
