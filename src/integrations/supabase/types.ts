@@ -158,6 +158,36 @@ export type Database = {
         }
         Relationships: []
       }
+      shortcut_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          last_used_at: string | null
+          token_hash: string
+          user_id: string
+          wallet_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string
+          last_used_at?: string | null
+          token_hash: string
+          user_id: string
+          wallet_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          last_used_at?: string | null
+          token_hash?: string
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           asset: string

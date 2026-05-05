@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.parse-slip]
 verify_jwt = false
+
+[functions.ingest-slip]
+verify_jwt = false
