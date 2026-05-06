@@ -77,9 +77,9 @@ export function ShortcutTokenManager() {
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setNewToken(null); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Smartphone className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Shortcut</span>
+        <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+          <Smartphone className="h-4 w-4" />
+          iOS Shortcut
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

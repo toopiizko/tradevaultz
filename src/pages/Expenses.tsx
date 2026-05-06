@@ -13,7 +13,6 @@ import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { NoteEditor } from "@/components/NoteEditor";
 import { SlipUploader } from "@/components/SlipUploader";
-import { ShortcutTokenManager } from "@/components/ShortcutTokenManager";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -387,7 +386,6 @@ export default function Expenses() {
             <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
           <SlipUploader />
-          <ShortcutTokenManager />
           <CategoryManager />
           <RulesManager />
           <Dialog open={open} onOpenChange={setOpen}>
