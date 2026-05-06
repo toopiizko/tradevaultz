@@ -54,12 +54,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const isExpensesArea = location.pathname.startsWith("/expenses");
 
-  // Bottom bar: Dashboard, Trades | FAB | Expenses, P&L Calendar
+  // Bottom bar: context-aware Calendar links to expense calendar when in expense area
   const bottomNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/trades", label: "Trades", icon: BookOpen },
     { to: "/expenses", label: "Expenses", icon: Wallet },
-    { to: "/calendar", label: "Calendar", icon: Calendar },
+    isExpensesArea
+      ? { to: "/expenses/calendar", label: "Calendar", icon: CalendarDays }
+      : { to: "/calendar", label: "Calendar", icon: Calendar },
   ];
   const leftNav = bottomNav.slice(0, 2);
   const rightNav = bottomNav.slice(2);
