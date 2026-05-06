@@ -26,7 +26,7 @@ function generateToken(): string {
 
 type Row = { id: string; label: string; wallet_id: string | null; created_at: string; last_used_at: string | null };
 
-export function ShortcutTokenManager() {
+export function ShortcutTokenManager({ fullWidth = false }: { fullWidth?: boolean } = {}) {
   const { user } = useAuth();
   const { wallets } = useWallets();
   const [open, setOpen] = useState(false);
