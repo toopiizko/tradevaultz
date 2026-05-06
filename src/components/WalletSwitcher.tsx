@@ -181,11 +181,14 @@ export function WalletSwitcher({ compact = false }: { compact?: boolean }) {
             ))}
           </div>
 
-          <div className="p-2 border-t border-border/60">
+          <div className="p-2 border-t border-border/60 space-y-1">
             <Button size="sm" variant="ghost" className="w-full justify-start gap-2"
               onClick={() => { setCreateOpen(true); setOpen(false); }}>
               <Plus className="h-4 w-4" /> New Wallet
             </Button>
+            <div onClick={() => setOpen(false)}>
+              <ShortcutTokenManager />
+            </div>
           </div>
         </PopoverContent>
       </Popover>
