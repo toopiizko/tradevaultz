@@ -12,6 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { ShortcutTokenManager } from "@/components/ShortcutTokenManager";
 
 const PRESET_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
 const CURRENCIES = ["USD", "THB", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "SGD", "HKD"];
