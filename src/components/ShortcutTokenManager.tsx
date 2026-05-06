@@ -146,23 +146,27 @@ export function ShortcutTokenManager() {
           </div>
 
           <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-xs">
-            <p className="font-semibold">📱 ตั้งค่า iOS Shortcut</p>
+            <p className="font-semibold">📱 ตั้งค่า iOS Shortcut (ทำตามลำดับ)</p>
             <ol className="list-decimal pl-4 space-y-1 text-muted-foreground">
               <li>เปิดแอป <b>Shortcuts</b> → กด <b>+</b> สร้างใหม่</li>
-              <li>เพิ่ม action <b>"Get Contents of URL"</b></li>
-              <li>URL: <code className="break-all bg-background px-1 rounded">{INGEST_URL}</code>
-                <Button size="sm" variant="ghost" className="h-5 px-1 ml-1" onClick={() => copy(INGEST_URL)}>
-                  <Copy className="h-3 w-3" />
-                </Button>
+              <li>กดไอคอน <b>(i)</b> ด้านล่าง → เปิด <b>Show in Share Sheet</b></li>
+              <li>ที่ "Receive" เลือก <b>Images</b> เท่านั้น</li>
+              <li>เพิ่ม action <b>Get Contents of URL</b>
+                <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                  <li>URL: <code className="break-all bg-background px-1 rounded">{INGEST_URL}</code>
+                    <Button size="sm" variant="ghost" className="h-5 px-1 ml-1" onClick={() => copy(INGEST_URL)}><Copy className="h-3 w-3" /></Button>
+                  </li>
+                  <li>Method: <b>POST</b></li>
+                  <li>Headers → <code>Authorization</code> = <code>Bearer YOUR_TOKEN</code></li>
+                  <li>Request Body: <b>Form</b> → Add new field, Type <b>File</b>, Key = <code>files</code>, Value = <b>Shortcut Input</b></li>
+                </ul>
               </li>
-              <li>Method: <b>POST</b></li>
-              <li>Headers: เพิ่ม <code>Authorization</code> = <code>Bearer YOUR_TOKEN</code></li>
-              <li>Request Body: <b>Form</b> → key <code>files</code> = <b>Shortcut Input</b> (Type: File)</li>
-              <li>ที่ด้านบน "Receive" → เลือก <b>Images</b> from <b>Share Sheet</b></li>
-              <li>ตั้งชื่อ Shortcut เช่น "Save Slip" → เสร็จ</li>
-              <li>ใช้งาน: ในแอปธนาคาร แชร์รูปสลิป → เลือก Shortcut → บันทึกอัตโนมัติ ✨</li>
+              <li><b>สำคัญ:</b> เพิ่ม action <b>Show Notification</b> ต่อท้าย → Body = <b>Contents of URL</b> (ไม่งั้น Shortcut จะปิดไปเงียบๆ ทำให้คิดว่ามันเด้ง)</li>
+              <li>ตั้งชื่อ "Save Slip" → Done</li>
+              <li>ใช้งาน: แอปธนาคาร → แชร์รูป → เลือก Shortcut → รอ notification ✨</li>
             </ol>
-            <p className="pt-1 text-muted-foreground/80">💡 ใช้ test ผ่าน curl ก่อนได้:
+            <p className="pt-1 text-amber-500">⚠️ ถ้า Shortcut เปิดมาแล้วปิดเอง = รันเสร็จแล้วแต่ไม่มี action แสดงผล ให้เพิ่ม <b>Show Notification</b> ตามข้อ 5</p>
+            <p className="pt-1 text-muted-foreground/80">💡 ทดสอบด้วย curl:
               <br /><code className="text-[10px] break-all">curl -X POST {INGEST_URL} -H "Authorization: Bearer TOKEN" -F "files=@slip.jpg"</code>
             </p>
           </div>
