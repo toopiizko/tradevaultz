@@ -227,9 +227,32 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
                         <span className="text-[10px] text-muted-foreground">conf {(s.confidence * 100).toFixed(0)}%</span>
                       </div>
                       <p className="font-semibold text-sm truncate">{s.merchant || "—"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{s.description}</p>
                     </div>
                   </div>
+
+                  {/* AI-extracted note preview — confirm before save */}
+                  <div className="rounded-md border border-primary/30 bg-primary/5 p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[10px] flex items-center gap-1 text-primary">
+                        <Sparkles className="h-3 w-3" /> AI-extracted Note (will be saved as Description)
+                      </Label>
+                      {!(s.description || "").trim() && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">⚠ No note on slip</span>
+                      )}
+                    </div>
+                    <Input
+                      className="h-8 text-xs"
+                      value={s.description}
+                      placeholder="(empty — will save with no description)"
+                      onChange={(e) => update(i, { description: e.target.value })}
+                    />
+                    {!(s.description || "").trim() && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        AI didn't find a user note on this slip. It will be saved with an empty description. You can type one above if you'd like.
+                      </p>
+                    )}
+                  </div>
+
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
