@@ -18,7 +18,7 @@ From each slip image, extract these fields:
 - currency: "THB" or "USD" (or detected currency code). Default "THB" for Thai bank slips.
 - expense_date: ISO date YYYY-MM-DD. If only DD/MM, use the year from context (assume current year if missing).
 - merchant: the counterparty name (recipient for expense, sender for income). Short human readable.
-- description: brief memo combining merchant + reference/note from the slip.
+- description: ONLY the user-written note / memo / "บันทึกช่วยจำ" / "หมายเหตุ" field on the slip. DO NOT include the transaction reference id, transaction tag, bank ref code, payment id, or merchant name. If there is no user note on the slip, return an empty string "".
 - suggested_category: choose ONE based on merchant/description.
   Expense: "Food","Transport","Housing","Bills","Shopping","Entertainment","Health","Education","Other"
   Income: "Salary","Trading Profit","Investment","Freelance","Other"
