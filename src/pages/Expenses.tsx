@@ -720,7 +720,7 @@ export default function Expenses() {
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm truncate flex items-center gap-1.5">
-                          {e.description || <span className="text-muted-foreground italic">No note</span>}
+                          {e.description ? truncate(e.description, descMaxLen) : <span className="text-muted-foreground italic">No note</span>}
                           <ImageBadge count={imgs.length} />
                         </p>
                         <p className="text-[10px] text-muted-foreground">
