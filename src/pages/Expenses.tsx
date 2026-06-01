@@ -78,6 +78,7 @@ export default function Expenses() {
   const [period, setPeriod] = useState<PeriodKey>("this-month");
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [searchParams, setSearchParams] = useSearchParams();
+  const [descMaxLen, setDescMaxLen] = useDescMaxLen();
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
