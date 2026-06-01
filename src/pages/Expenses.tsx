@@ -27,9 +27,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X, Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useDescMaxLen, truncate } from "@/hooks/useDescMaxLen";
 import {
   format, startOfMonth, endOfMonth, addMonths, subMonths,
   startOfWeek, endOfWeek, startOfYear, endOfYear, subDays,
