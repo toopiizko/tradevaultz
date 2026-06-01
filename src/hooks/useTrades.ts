@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from “react”;
-import { supabase } from “@/integrations/supabase/client”;
-import { useAuth } from “@/lib/auth”;
-import { usePortfolio, ALL_PORTFOLIOS } from “@/lib/portfolio”;
-import { Trade } from “@/lib/types”;
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { usePortfolio, ALL_PORTFOLIOS } from "@/lib/portfolio";
+import { Trade } from "@/lib/types";
 
 export function useTrades() {
 const { user } = useAuth();
@@ -14,9 +14,9 @@ const refresh = useCallback(async () => {
 if (!user) return;
 setLoading(true);
 let query = supabase
-.from(“trades”)
-.select(”*”)
-.order(“trade_date”, { ascending: false });
+.from("trades")
+.select("*")
+.order("trade_date", { ascending: false });
 
 ```
 if (activeId !== ALL_PORTFOLIOS) {
