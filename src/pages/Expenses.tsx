@@ -27,9 +27,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet as WalletIcon, PieChart as PieIcon,
-  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X,
+  Upload, Download, Sparkles, ChevronLeft, ChevronRight, Filter, Pencil, X, Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useDescMaxLen, truncate } from "@/hooks/useDescMaxLen";
 import {
   format, startOfMonth, endOfMonth, addMonths, subMonths,
   startOfWeek, endOfWeek, startOfYear, endOfYear, subDays,
@@ -77,6 +78,7 @@ export default function Expenses() {
   const [period, setPeriod] = useState<PeriodKey>("this-month");
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [searchParams, setSearchParams] = useSearchParams();
+  const [descMaxLen, setDescMaxLen] = useDescMaxLen();
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -385,6 +387,38 @@ export default function Expenses() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
             <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5" title="Display settings">
+                <Settings2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">Display</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 space-y-2">
+              <div>
+                <Label className="text-xs">Note length in history</Label>
+                <p className="text-[10px] text-muted-foreground mb-1.5">Truncate long descriptions in the list view.</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={10}
+                    max={500}
+                    value={descMaxLen}
+                    onChange={(e) => setDescMaxLen(Math.max(10, Math.min(500, parseInt(e.target.value) || 60)))}
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground">chars</span>
+                </div>
+                <div className="flex gap-1 mt-1.5">
+                  {[40, 60, 100, 200].map((n) => (
+                    <button key={n} onClick={() => setDescMaxLen(n)}
+                      className={`text-[10px] px-2 py-0.5 rounded border ${descMaxLen === n ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <SlipUploader />
           <CategoryManager />
           <RulesManager />
@@ -686,7 +720,7 @@ export default function Expenses() {
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.type === "income" ? "bg-success" : "bg-destructive"}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm truncate flex items-center gap-1.5">
-                          {e.description || <span className="text-muted-foreground italic">No note</span>}
+                          {e.description ? truncate(e.description, descMaxLen) : <span className="text-muted-foreground italic">No note</span>}
                           <ImageBadge count={imgs.length} />
                         </p>
                         <p className="text-[10px] text-muted-foreground">
