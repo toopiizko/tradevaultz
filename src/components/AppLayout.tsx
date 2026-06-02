@@ -119,7 +119,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center justify-between px-3 gap-2 bg-background/80 backdrop-blur-xl border-b border-border/60">
+      <header
+        className="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-3 gap-2 bg-background/80 backdrop-blur-xl border-b border-border/60"
+        style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(3.5rem + env(safe-area-inset-top))" }}
+      >
         <div className="flex items-center gap-2 shrink-0">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <TrendingUp className="h-4 w-4 text-primary-foreground" />
