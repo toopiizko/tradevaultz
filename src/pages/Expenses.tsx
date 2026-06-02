@@ -139,12 +139,12 @@ export default function Expenses() {
     return filteredAll.filter((e) => categoryFilter.has(e.category));
   }, [filteredAll, categoryFilter]);
 
-  const totals = useMemo(() => {
-    const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
-    const expense = filteredAll.filter((e) => e.type === "expense").reduce((s, e) => s + Number(e.amount), 0);
-    return { income, expense, net: income - expense };
-  }, [filteredAll]);
-
+  // Normalize each row to USD baseline using stored currency (legacy rows = USD).
+  const toUsd = (e: any) => {
+    const c = ((e.currency as string) || "USD").toUpperCase();
+    const amt = Number(e.amount);
+    return c === "THB" ? amt / rate : amt;
+  };
   const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
   const display = (amount: number) => formatMoney(convert(amount), currency);
   // For history rows: show the original stored currency (no conversion).
@@ -154,11 +154,18 @@ export default function Expenses() {
     return formatMoney(Number(e.amount), c);
   };
 
+  const totals = useMemo(() => {
+    const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + toUsd(e), 0);
+    const expense = filteredAll.filter((e) => e.type === "expense").reduce((s, e) => s + toUsd(e), 0);
+    return { income, expense, net: income - expense };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredAll, rate]);
+
   const categoryData = useMemo(() => {
     const map = new Map<string, number>();
     filteredAll
       .filter((e) => e.type === "expense")
-      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + Number(e.amount)));
+      .forEach((e) => map.set(e.category, (map.get(e.category) ?? 0) + toUsd(e)));
     const total = Array.from(map.values()).reduce((s, v) => s + v, 0) || 1;
     return Array.from(map.entries())
       .map(([name, valueUsd]) => ({
@@ -168,6 +175,7 @@ export default function Expenses() {
         pct: (valueUsd / total) * 100,
       }))
       .sort((a, b) => b.value - a.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredAll, currency, rate]);
 
   const monthlyData = useMemo(() => {
@@ -176,8 +184,8 @@ export default function Expenses() {
       const key = format(startOfMonth(new Date(e.expense_date)), "yyyy-MM");
       const label = format(new Date(e.expense_date), "MMM yy");
       const cur = map.get(key) ?? { month: label, income: 0, expense: 0 };
-      if (e.type === "income") cur.income += Number(e.amount);
-      else cur.expense += Number(e.amount);
+      if (e.type === "income") cur.income += toUsd(e);
+      else cur.expense += toUsd(e);
       map.set(key, cur);
     });
     return Array.from(map.entries())
@@ -188,6 +196,7 @@ export default function Expenses() {
         Income: Number(convert(v.income).toFixed(2)),
         Expense: Number(convert(v.expense).toFixed(2)),
       }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredAll, currency, rate]);
 
   const totalExpense = categoryData.reduce((s, c) => s + c.value, 0);
