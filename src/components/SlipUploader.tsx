@@ -105,16 +105,17 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
     setBusy(true);
     try {
       const rows = picked.map((s) => {
-        const amountUsd = (s.currency || "").toUpperCase() === "THB" ? s.amount / rate : s.amount;
+        const cur = (s.currency || "THB").toUpperCase();
         return {
           user_id: user.id,
           type: s.type,
-          amount: amountUsd,
+          amount: s.amount,
+          currency: cur,
           category: s.suggested_category,
           description: (s.description || "").trim() || null,
           expense_date: new Date(s.expense_date).toISOString(),
           ...(walletId ? { wallet_id: walletId } as any : {}),
-        };
+        } as any;
       });
       const { data: inserted, error } = await supabase.from("expenses").insert(rows as any).select("id");
       if (error) throw error;
