@@ -862,7 +862,7 @@ export default function Expenses() {
                       </Popover>
                     </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                      {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                      {e.type === "income" ? "+" : "-"}{displayRow(e)}
                     </td>
                     <td className="px-3 py-2.5">
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
