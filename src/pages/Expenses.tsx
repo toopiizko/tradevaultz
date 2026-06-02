@@ -734,7 +734,7 @@ export default function Expenses() {
                         </p>
                       </div>
                       <span className={`text-sm font-bold shrink-0 ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                        {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                        {e.type === "income" ? "+" : "-"}{displayRow(e)}
                       </span>
                     </button>
                   </PopoverTrigger>
