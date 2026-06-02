@@ -160,14 +160,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 min-h-screen">
+      <main
+        className="flex-1 lg:ml-64 lg:pt-0 lg:pb-0 min-h-screen"
+        style={{
+          paddingTop: "calc(3.5rem + env(safe-area-inset-top))",
+          paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="max-w-7xl mx-auto p-4 lg:p-8">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom nav with center FAB */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60">
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="grid grid-cols-5 items-end relative">
           {leftNav.map((item) => {
             const Icon = item.icon;
