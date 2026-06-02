@@ -119,7 +119,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center justify-between px-3 gap-2 bg-background/80 backdrop-blur-xl border-b border-border/60">
+      <header
+        className="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between px-3 gap-2 bg-background/80 backdrop-blur-xl border-b border-border/60"
+        style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(3.5rem + env(safe-area-inset-top))" }}
+      >
         <div className="flex items-center gap-2 shrink-0">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <TrendingUp className="h-4 w-4 text-primary-foreground" />
@@ -157,14 +160,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 min-h-screen">
+      <main className="flex-1 lg:ml-64 min-h-screen pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pt-0 lg:pb-0">
         <div className="max-w-7xl mx-auto p-4 lg:p-8">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom nav with center FAB */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60">
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-background/90 backdrop-blur-xl border-t border-border/60"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="grid grid-cols-5 items-end relative">
           {leftNav.map((item) => {
             const Icon = item.icon;

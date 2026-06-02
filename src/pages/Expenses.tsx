@@ -147,6 +147,12 @@ export default function Expenses() {
 
   const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
   const display = (amount: number) => formatMoney(convert(amount), currency);
+  // For history rows: show the original stored currency (no conversion).
+  // Legacy rows without a currency are treated as USD.
+  const displayRow = (e: any) => {
+    const c = ((e.currency as string) || "USD").toUpperCase() as "USD" | "THB";
+    return formatMoney(Number(e.amount), c);
+  };
 
   const categoryData = useMemo(() => {
     const map = new Map<string, number>();
@@ -728,7 +734,7 @@ export default function Expenses() {
                         </p>
                       </div>
                       <span className={`text-sm font-bold shrink-0 ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                        {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                        {e.type === "income" ? "+" : "-"}{displayRow(e)}
                       </span>
                     </button>
                   </PopoverTrigger>
@@ -856,7 +862,7 @@ export default function Expenses() {
                       </Popover>
                     </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                      {e.type === "income" ? "+" : "-"}{display(Number(e.amount))}
+                      {e.type === "income" ? "+" : "-"}{displayRow(e)}
                     </td>
                     <td className="px-3 py-2.5">
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
