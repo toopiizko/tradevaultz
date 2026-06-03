@@ -16,6 +16,12 @@ export default function ExpenseCalendar() {
 
   const conv = (usd: number) => currency === "THB" ? usd * rate : usd;
   const fmt = (usd: number) => formatMoney(conv(usd), currency);
+  // Normalize each row to USD baseline using its stored currency (legacy = USD)
+  const toUsd = (e: any) => {
+    const c = ((e.currency as string) || "USD").toUpperCase();
+    const amt = Number(e.amount);
+    return c === "THB" ? amt / rate : amt;
+  };
 
   // aggregate by YYYY-MM-DD
   const byDay = useMemo(() => {
@@ -23,13 +29,14 @@ export default function ExpenseCalendar() {
     expenses.forEach((e) => {
       const k = format(new Date(e.expense_date), "yyyy-MM-dd");
       const cur = m.get(k) ?? { income: 0, expense: 0, items: [] as typeof expenses };
-      if (e.type === "income") cur.income += Number(e.amount);
-      else cur.expense += Number(e.amount);
+      if (e.type === "income") cur.income += toUsd(e);
+      else cur.expense += toUsd(e);
       cur.items.push(e);
       m.set(k, cur);
     });
     return m;
-  }, [expenses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenses, rate]);
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
@@ -42,12 +49,13 @@ export default function ExpenseCalendar() {
     expenses.forEach((e) => {
       const d = new Date(e.expense_date);
       if (isSameMonth(d, cursor)) {
-        if (e.type === "income") income += Number(e.amount);
-        else expense += Number(e.amount);
+        if (e.type === "income") income += toUsd(e);
+        else expense += toUsd(e);
       }
     });
     return { income, expense, net: income - expense };
-  }, [expenses, cursor]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenses, cursor, rate]);
 
   const selectedKey = selected ? format(selected, "yyyy-MM-dd") : "";
   const selectedData = selected ? byDay.get(selectedKey) : null;
