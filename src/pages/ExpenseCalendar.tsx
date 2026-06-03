@@ -182,7 +182,7 @@ export default function ExpenseCalendar() {
                   <p className="text-xs text-muted-foreground truncate">{e.description || "—"}</p>
                 </div>
                 <span className={`text-sm font-bold shrink-0 ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                  {e.type === "income" ? "+" : "-"}{fmt(Number(e.amount))}
+                  {e.type === "income" ? "+" : "-"}{fmt(toUsd(e))}
                 </span>
               </li>
             ))}
