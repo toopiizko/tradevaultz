@@ -147,12 +147,8 @@ export default function Expenses() {
   };
   const convert = (usd: number) => (currency === "THB" ? usd * rate : usd);
   const display = (amount: number) => formatMoney(convert(amount), currency);
-  // For history rows: show the original stored currency (no conversion).
-  // Legacy rows without a currency are treated as USD.
-  const displayRow = (e: any) => {
-    const c = ((e.currency as string) || "USD").toUpperCase() as "USD" | "THB";
-    return formatMoney(Number(e.amount), c);
-  };
+  // History rows convert into the active display currency, normalized via stored currency.
+  const displayRow = (e: any) => display(toUsd(e));
 
   const totals = useMemo(() => {
     const income = filteredAll.filter((e) => e.type === "income").reduce((s, e) => s + toUsd(e), 0);
