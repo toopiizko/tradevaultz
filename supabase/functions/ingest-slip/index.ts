@@ -178,15 +178,14 @@ Deno.serve(async (req) => {
 
         const rawAmount = Number(slip.amount) || 0;
         const cur = String(slip.currency || "THB").toUpperCase();
-        // Store in USD base (matches Expenses.handleAdd behavior)
-        const amountUsd = cur === "THB" ? rawAmount / usdThb : rawAmount;
 
         const { data: inserted, error: insErr } = await admin.from("expenses").insert({
           user_id: tokRow.user_id,
           type: slip.type === "income" ? "income" : "expense",
-          amount: amountUsd,
+          amount: rawAmount,
+          currency: cur,
           category: slip.suggested_category || "Other",
-          description: slip.description || slip.merchant || null,
+          description: (slip.description || "").trim() || null,
           expense_date: new Date(slip.expense_date || Date.now()).toISOString(),
           ...(tokRow.wallet_id ? { wallet_id: tokRow.wallet_id } : {}),
         }).select("id").single();
