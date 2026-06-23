@@ -165,6 +165,7 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
           category: s.suggested_category,
           description: (s.description || "").trim() || null,
           expense_date: new Date(s.expense_date).toISOString(),
+          slip_hash: s._hash || null,
           ...(walletId ? { wallet_id: walletId } as any : {}),
         } as any;
       });
