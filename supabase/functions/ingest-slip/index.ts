@@ -16,6 +16,7 @@ const corsHeaders = {
 
 const SYSTEM = `You are a Thai bank transfer slip / receipt parser (SCB, KBank, BBL, Krungsri, TTB, GSB, KTB, TrueMoney, PromptPay) and generic receipts.
 Return ONE slip per image. Default currency is THB unless explicitly shown otherwise.
+For description: extract ONLY the user-written note / memo / "บันทึกช่วยจำ" / "หมายเหตุ" field on the slip. DO NOT include transaction reference id, transaction tag, bank ref code, payment id, or merchant name. If there is no user note, return an empty string "".
 For suggested_category, pick a short common Thai-life category in English: Food, Transport, Shopping, Bills, Utilities, Entertainment, Health, Education, Transfer, Salary, Other.`;
 
 const FALLBACK_USD_THB = 35;
