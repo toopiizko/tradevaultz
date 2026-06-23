@@ -90,6 +90,7 @@ export type Database = {
           expense_date: string
           id: string
           image_urls: string[]
+          slip_hash: string | null
           type: string
           updated_at: string
           user_id: string
@@ -104,6 +105,7 @@ export type Database = {
           expense_date?: string
           id?: string
           image_urls?: string[]
+          slip_hash?: string | null
           type?: string
           updated_at?: string
           user_id: string
@@ -118,6 +120,7 @@ export type Database = {
           expense_date?: string
           id?: string
           image_urls?: string[]
+          slip_hash?: string | null
           type?: string
           updated_at?: string
           user_id?: string

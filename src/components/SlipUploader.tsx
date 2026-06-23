@@ -27,6 +27,8 @@ type Slip = {
   _userChangedCategory?: boolean;
   _selected: boolean;
   _previewUrl: string;
+  _hash: string;
+  _duplicate?: boolean;
 };
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -36,6 +38,11 @@ async function fileToDataUrl(file: File): Promise<string> {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
+}
+
+async function sha256Hex(buf: ArrayBuffer): Promise<string> {
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
@@ -71,9 +78,25 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
     setOpen(true);
     setBusy(true);
     try {
+      // Hash each file by content (SHA-256) and de-dup within picked batch + against DB
+      const hashes = await Promise.all(files.map(async (f) => sha256Hex(await f.arrayBuffer())));
+      const seen = new Set<string>();
+      const dupInBatch = new Set<number>();
+      hashes.forEach((h, i) => { if (seen.has(h)) dupInBatch.add(i); else seen.add(h); });
+
+      const uniqueHashes = Array.from(new Set(hashes));
+      let dbDupSet = new Set<string>();
+      if (user && uniqueHashes.length) {
+        const { data: existing } = await supabase
+          .from("expenses")
+          .select("slip_hash")
+          .eq("user_id", user.id)
+          .in("slip_hash", uniqueHashes);
+        dbDupSet = new Set((existing ?? []).map((r: any) => r.slip_hash).filter(Boolean));
+      }
+
       const dataUrls = await Promise.all(files.map(fileToDataUrl));
       toast.info(`AI analyzing ${files.length} slip${files.length > 1 ? "s" : ""}…`);
-      // Batch into chunks of 5 (parse-slip limit) and call in parallel
       const chunks: { urls: string[]; offset: number }[] = [];
       for (let i = 0; i < dataUrls.length; i += BATCH) {
         chunks.push({ urls: dataUrls.slice(i, i + BATCH), offset: i });
@@ -89,7 +112,15 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
         const chunk = chunks[idx];
         const slips = (r.data?.slips ?? []) as Slip[];
         slips.forEach((s, i) => {
-          parsed.push({ ...s, _previewUrl: dataUrls[chunk.offset + i] ?? "" } as Slip);
+          const globalIdx = chunk.offset + i;
+          const h = hashes[globalIdx] ?? "";
+          const isDup = dbDupSet.has(h) || dupInBatch.has(globalIdx);
+          parsed.push({
+            ...s,
+            _previewUrl: dataUrls[globalIdx] ?? "",
+            _hash: h,
+            _duplicate: isDup,
+          } as Slip);
         });
       });
       const enriched = parsed.map((s) => {
@@ -97,10 +128,14 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
         return {
           ...s,
           suggested_category: ruled || s.suggested_category || "Other",
-          _selected: true,
+          _selected: !s._duplicate,
         };
       });
       setSlips(enriched);
+      const dupCount = enriched.filter((s) => s._duplicate).length;
+      if (dupCount > 0) {
+        toast.warning(`${dupCount} duplicate slip${dupCount > 1 ? "s" : ""} detected — unchecked`);
+      }
       toast.success(`Parsed ${enriched.length} slip${enriched.length > 1 ? "s" : ""}`);
     } catch (err: any) {
       console.error(err);
@@ -130,6 +165,7 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
           category: s.suggested_category,
           description: (s.description || "").trim() || null,
           expense_date: new Date(s.expense_date).toISOString(),
+          slip_hash: s._hash || null,
           ...(walletId ? { wallet_id: walletId } as any : {}),
         } as any;
       });
@@ -233,7 +269,12 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
             {slips.map((s, i) => {
               const cats = s.type === "income" ? incomeCats : expenseCats;
               return (
-                <div key={i} className="rounded-lg border border-border/60 p-3 space-y-2 bg-secondary/30">
+                <div key={i} className={`rounded-lg border p-3 space-y-2 ${s._duplicate ? "border-amber-500/60 bg-amber-500/5" : "border-border/60 bg-secondary/30"}`}>
+                  {s._duplicate && (
+                    <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                      ⚠ Duplicate — this slip already exists. Uncheck to skip, or override to save anyway.
+                    </div>
+                  )}
                   <div className="flex items-start gap-3">
                     {s._previewUrl && (
                       <img src={s._previewUrl} alt="slip" className="h-20 w-20 rounded object-cover border border-border" />

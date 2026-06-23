@@ -28,6 +28,11 @@ async function sha256Hex(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function sha256HexBytes(bytes: Uint8Array): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";
   const chunk = 0x8000;
@@ -172,6 +177,19 @@ Deno.serve(async (req) => {
 
     for (const original of imgs) {
       try {
+        // Hash the original bytes for duplicate detection
+        const slipHash = await sha256HexBytes(original.bytes);
+        const { data: dup } = await admin
+          .from("expenses")
+          .select("id")
+          .eq("user_id", tokRow.user_id)
+          .eq("slip_hash", slipHash)
+          .maybeSingle();
+        if (dup) {
+          results.push({ ok: false, duplicate: true, existing_id: dup.id, slip_hash: slipHash, error: "duplicate" });
+          continue;
+        }
+
         const compressed = await compress(original);
         const slip = await parseSlip(LOVABLE_API_KEY, compressed);
         if (!slip) { results.push({ ok: false, error: "parse_failed" }); continue; }
@@ -187,6 +205,7 @@ Deno.serve(async (req) => {
           category: slip.suggested_category || "Other",
           description: (slip.description || "").trim() || null,
           expense_date: new Date(slip.expense_date || Date.now()).toISOString(),
+          slip_hash: slipHash,
           ...(tokRow.wallet_id ? { wallet_id: tokRow.wallet_id } : {}),
         }).select("id").single();
         if (insErr || !inserted) { results.push({ ok: false, error: insErr?.message || "insert_failed" }); continue; }
@@ -196,7 +215,7 @@ Deno.serve(async (req) => {
         const up = await admin.storage.from("transaction-images").upload(key, compressed.bytes, { contentType: compressed.type, upsert: false });
         if (!up.error) await admin.from("expenses").update({ image_urls: [key] }).eq("id", inserted.id);
 
-        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, raw_amount: rawAmount, currency: cur });
+        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, raw_amount: rawAmount, currency: cur, slip_hash: slipHash });
       } catch (e) {
         console.error("slip error", e);
         results.push({ ok: false, error: e instanceof Error ? e.message : "unknown" });
