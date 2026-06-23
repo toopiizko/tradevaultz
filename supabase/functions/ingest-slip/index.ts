@@ -16,6 +16,7 @@ const corsHeaders = {
 
 const SYSTEM = `You are a Thai bank transfer slip / receipt parser (SCB, KBank, BBL, Krungsri, TTB, GSB, KTB, TrueMoney, PromptPay) and generic receipts.
 Return ONE slip per image. Default currency is THB unless explicitly shown otherwise.
+For description: extract ONLY the user-written note / memo / "บันทึกช่วยจำ" / "หมายเหตุ" field on the slip. DO NOT include transaction reference id, transaction tag, bank ref code, payment id, or merchant name. If there is no user note, return an empty string "".
 For suggested_category, pick a short common Thai-life category in English: Food, Transport, Shopping, Bills, Utilities, Entertainment, Health, Education, Transfer, Salary, Other.`;
 
 const FALLBACK_USD_THB = 35;
@@ -177,15 +178,14 @@ Deno.serve(async (req) => {
 
         const rawAmount = Number(slip.amount) || 0;
         const cur = String(slip.currency || "THB").toUpperCase();
-        // Store in USD base (matches Expenses.handleAdd behavior)
-        const amountUsd = cur === "THB" ? rawAmount / usdThb : rawAmount;
 
         const { data: inserted, error: insErr } = await admin.from("expenses").insert({
           user_id: tokRow.user_id,
           type: slip.type === "income" ? "income" : "expense",
-          amount: amountUsd,
+          amount: rawAmount,
+          currency: cur,
           category: slip.suggested_category || "Other",
-          description: slip.description || slip.merchant || null,
+          description: (slip.description || "").trim() || null,
           expense_date: new Date(slip.expense_date || Date.now()).toISOString(),
           ...(tokRow.wallet_id ? { wallet_id: tokRow.wallet_id } : {}),
         }).select("id").single();
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         const up = await admin.storage.from("transaction-images").upload(key, compressed.bytes, { contentType: compressed.type, upsert: false });
         if (!up.error) await admin.from("expenses").update({ image_urls: [key] }).eq("id", inserted.id);
 
-        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, amount_usd: amountUsd, raw_amount: rawAmount, currency: cur });
+        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, raw_amount: rawAmount, currency: cur });
       } catch (e) {
         console.error("slip error", e);
         results.push({ ok: false, error: e instanceof Error ? e.message : "unknown" });
