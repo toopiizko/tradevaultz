@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         const up = await admin.storage.from("transaction-images").upload(key, compressed.bytes, { contentType: compressed.type, upsert: false });
         if (!up.error) await admin.from("expenses").update({ image_urls: [key] }).eq("id", inserted.id);
 
-        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, amount_usd: amountUsd, raw_amount: rawAmount, currency: cur });
+        results.push({ ok: true, id: inserted.id, slip, original_bytes: original.bytes.byteLength, compressed_bytes: compressed.bytes.byteLength, raw_amount: rawAmount, currency: cur });
       } catch (e) {
         console.error("slip error", e);
         results.push({ ok: false, error: e instanceof Error ? e.message : "unknown" });
