@@ -27,6 +27,8 @@ type Slip = {
   _userChangedCategory?: boolean;
   _selected: boolean;
   _previewUrl: string;
+  _hash: string;
+  _duplicate?: boolean;
 };
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -36,6 +38,11 @@ async function fileToDataUrl(file: File): Promise<string> {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
+}
+
+async function sha256Hex(buf: ArrayBuffer): Promise<string> {
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
