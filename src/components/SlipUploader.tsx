@@ -61,27 +61,43 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
   const [walletId, setWalletId] = useState<string>(activeWalletId !== ALL_WALLETS ? activeWalletId : "");
 
   const handlePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).slice(0, 5);
+    const MAX_SLIPS = 20;
+    const BATCH = 5;
+    const all = Array.from(e.target.files ?? []);
+    const files = all.slice(0, MAX_SLIPS);
     e.target.value = "";
     if (!files.length) return;
+    if (all.length > MAX_SLIPS) toast.info(`Picked first ${MAX_SLIPS} of ${all.length} files`);
     setOpen(true);
     setBusy(true);
     try {
       const dataUrls = await Promise.all(files.map(fileToDataUrl));
-      const previews = dataUrls;
       toast.info(`AI analyzing ${files.length} slip${files.length > 1 ? "s" : ""}…`);
-      const { data, error } = await supabase.functions.invoke("parse-slip", {
-        body: { images: dataUrls, currencyHint: appCurrency },
+      // Batch into chunks of 5 (parse-slip limit) and call in parallel
+      const chunks: { urls: string[]; offset: number }[] = [];
+      for (let i = 0; i < dataUrls.length; i += BATCH) {
+        chunks.push({ urls: dataUrls.slice(i, i + BATCH), offset: i });
+      }
+      const results = await Promise.all(
+        chunks.map((c) =>
+          supabase.functions.invoke("parse-slip", { body: { images: c.urls, currencyHint: appCurrency } })
+        )
+      );
+      const parsed: Slip[] = [];
+      results.forEach((r, idx) => {
+        if (r.error) throw r.error;
+        const chunk = chunks[idx];
+        const slips = (r.data?.slips ?? []) as Slip[];
+        slips.forEach((s, i) => {
+          parsed.push({ ...s, _previewUrl: dataUrls[chunk.offset + i] ?? "" } as Slip);
+        });
       });
-      if (error) throw error;
-      const parsed = (data?.slips ?? []) as Slip[];
-      const enriched = parsed.map((s, i) => {
+      const enriched = parsed.map((s) => {
         const ruled = applyRules(s.description || s.merchant || "", s.type);
         return {
           ...s,
           suggested_category: ruled || s.suggested_category || "Other",
           _selected: true,
-          _previewUrl: previews[i] ?? "",
         };
       });
       setSlips(enriched);
