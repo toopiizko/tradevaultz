@@ -269,7 +269,12 @@ export function SlipUploader({ trigger }: { trigger?: React.ReactNode }) {
             {slips.map((s, i) => {
               const cats = s.type === "income" ? incomeCats : expenseCats;
               return (
-                <div key={i} className="rounded-lg border border-border/60 p-3 space-y-2 bg-secondary/30">
+                <div key={i} className={`rounded-lg border p-3 space-y-2 ${s._duplicate ? "border-amber-500/60 bg-amber-500/5" : "border-border/60 bg-secondary/30"}`}>
+                  {s._duplicate && (
+                    <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                      ⚠ Duplicate — this slip already exists. Uncheck to skip, or override to save anyway.
+                    </div>
+                  )}
                   <div className="flex items-start gap-3">
                     {s._previewUrl && (
                       <img src={s._previewUrl} alt="slip" className="h-20 w-20 rounded object-cover border border-border" />
