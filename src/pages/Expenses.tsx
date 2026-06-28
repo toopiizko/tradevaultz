@@ -783,6 +783,14 @@ export default function Expenses() {
                       </Select>
                     </div>
                     <div>
+                      <p className="text-muted-foreground mb-1">Amount ({((e as any).currency || "USD").toUpperCase()})</p>
+                      <AmountEditor
+                        value={Number(e.amount)}
+                        currency={((e as any).currency || "USD").toUpperCase()}
+                        onSave={(n) => handleUpdateAmount(e.id, n)}
+                      />
+                    </div>
+                    <div>
                       <p className="text-muted-foreground mb-1">Note</p>
                       <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} />
                     </div>
