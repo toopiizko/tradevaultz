@@ -882,7 +882,23 @@ export default function Expenses() {
                       </Popover>
                     </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                      {e.type === "income" ? "+" : "-"}{displayRow(e)}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="hover:underline" title="Edit amount">
+                            {e.type === "income" ? "+" : "-"}{displayRow(e)}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56" align="end">
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Edit amount ({((e as any).currency || "USD").toUpperCase()})
+                          </p>
+                          <AmountEditor
+                            value={Number(e.amount)}
+                            currency={((e as any).currency || "USD").toUpperCase()}
+                            onSave={async (n) => { await handleUpdateAmount(e.id, n); }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </td>
                     <td className="px-3 py-2.5">
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
