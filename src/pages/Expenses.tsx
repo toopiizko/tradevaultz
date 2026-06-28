@@ -243,6 +243,12 @@ export default function Expenses() {
     toast.success("Note updated");
   };
 
+  const handleUpdateAmount = async (id: string, amount: number) => {
+    const { error } = await supabase.from("expenses").update({ amount }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Amount updated");
+  };
+
   // Bulk operations
   const toggleSelect = (id: string, on: boolean) => {
     setSelectedIds((prev) => {
