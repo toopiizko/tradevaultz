@@ -12,6 +12,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { NoteEditor } from "@/components/NoteEditor";
+import { AmountEditor } from "@/components/AmountEditor";
 import { SlipUploader } from "@/components/SlipUploader";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -240,6 +241,12 @@ export default function Expenses() {
     const { error } = await supabase.from("expenses").update({ description: description || null }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Note updated");
+  };
+
+  const handleUpdateAmount = async (id: string, amount: number) => {
+    const { error } = await supabase.from("expenses").update({ amount }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Amount updated");
   };
 
   // Bulk operations
@@ -776,6 +783,14 @@ export default function Expenses() {
                       </Select>
                     </div>
                     <div>
+                      <p className="text-muted-foreground mb-1">Amount ({((e as any).currency || "USD").toUpperCase()})</p>
+                      <AmountEditor
+                        value={Number(e.amount)}
+                        currency={((e as any).currency || "USD").toUpperCase()}
+                        onSave={async (n) => { await handleUpdateAmount(e.id, n); }}
+                      />
+                    </div>
+                    <div>
                       <p className="text-muted-foreground mb-1">Note</p>
                       <NoteEditor value={e.description} onSave={async (v) => { await handleUpdateNote(e.id, v); }} />
                     </div>
@@ -867,7 +882,23 @@ export default function Expenses() {
                       </Popover>
                     </td>
                     <td className={`px-3 py-2.5 font-bold ${e.type === "income" ? "text-success" : "text-destructive"}`}>
-                      {e.type === "income" ? "+" : "-"}{displayRow(e)}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="hover:underline" title="Edit amount">
+                            {e.type === "income" ? "+" : "-"}{displayRow(e)}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56" align="end">
+                          <p className="text-xs text-muted-foreground mb-1.5">
+                            Edit amount ({((e as any).currency || "USD").toUpperCase()})
+                          </p>
+                          <AmountEditor
+                            value={Number(e.amount)}
+                            currency={((e as any).currency || "USD").toUpperCase()}
+                            onSave={async (n) => { await handleUpdateAmount(e.id, n); }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </td>
                     <td className="px-3 py-2.5">
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
