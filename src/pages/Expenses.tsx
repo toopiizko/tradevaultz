@@ -787,7 +787,7 @@ export default function Expenses() {
                       <AmountEditor
                         value={Number(e.amount)}
                         currency={((e as any).currency || "USD").toUpperCase()}
-                        onSave={(n) => handleUpdateAmount(e.id, n)}
+                        onSave={async (n) => { await handleUpdateAmount(e.id, n); }}
                       />
                     </div>
                     <div>
