@@ -12,6 +12,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 import { RulesManager } from "@/components/RulesManager";
 import { ImageAttachments, ImageBadge } from "@/components/ImageAttachments";
 import { NoteEditor } from "@/components/NoteEditor";
+import { AmountEditor } from "@/components/AmountEditor";
 import { SlipUploader } from "@/components/SlipUploader";
 import { formatMoney } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
