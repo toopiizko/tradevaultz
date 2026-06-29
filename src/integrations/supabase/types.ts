@@ -164,6 +164,128 @@ export type Database = {
         }
         Relationships: []
       }
+      price_alert_events: {
+        Row: {
+          acknowledged: boolean
+          alert_id: string
+          asset: string
+          condition: string
+          created_at: string
+          id: string
+          target_price: number
+          triggered_price: number
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          alert_id: string
+          asset: string
+          condition: string
+          created_at?: string
+          id?: string
+          target_price: number
+          triggered_price: number
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean
+          alert_id?: string
+          asset?: string
+          condition?: string
+          created_at?: string
+          id?: string
+          target_price?: number
+          triggered_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_alert_events_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "price_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_alerts: {
+        Row: {
+          asset: string
+          condition: string
+          cooldown_minutes: number
+          created_at: string
+          id: string
+          last_price: number | null
+          last_triggered_at: string | null
+          note: string | null
+          repeat: boolean
+          status: string
+          target_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset: string
+          condition: string
+          cooldown_minutes?: number
+          created_at?: string
+          id?: string
+          last_price?: number | null
+          last_triggered_at?: string | null
+          note?: string | null
+          repeat?: boolean
+          status?: string
+          target_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset?: string
+          condition?: string
+          cooldown_minutes?: number
+          created_at?: string
+          id?: string
+          last_price?: number | null
+          last_triggered_at?: string | null
+          note?: string | null
+          repeat?: boolean
+          status?: string
+          target_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       shortcut_tokens: {
         Row: {
           created_at: string
