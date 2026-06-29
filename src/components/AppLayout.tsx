@@ -16,6 +16,7 @@ const portfolioNav = [
 ];
 
 const insightNav = [
+  { to: "/alerts", label: "Price Alerts", icon: BellRing },
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 
