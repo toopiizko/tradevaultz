@@ -18,6 +18,7 @@ import ExpenseCalendar from "./pages/ExpenseCalendar";
 import News from "./pages/News";
 import Portfolios from "./pages/Portfolios";
 import Share from "./pages/Share";
+import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
