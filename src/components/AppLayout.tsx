@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon, CalendarDays } from "lucide-react";
+import { LayoutDashboard, BookOpen, Calculator, Wallet, Calendar, Newspaper, LogOut, TrendingUp, Menu, Plus, Sun, Moon, CalendarDays, BellRing } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const portfolioNav = [
 ];
 
 const insightNav = [
+  { to: "/alerts", label: "Price Alerts", icon: BellRing },
   { to: "/news", label: "Economic News", icon: Newspaper },
 ];
 

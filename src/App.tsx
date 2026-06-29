@@ -18,6 +18,7 @@ import ExpenseCalendar from "./pages/ExpenseCalendar";
 import News from "./pages/News";
 import Portfolios from "./pages/Portfolios";
 import Share from "./pages/Share";
+import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/news" element={<Protected><News /></Protected>} />
                 <Route path="/portfolios" element={<Protected><Portfolios /></Protected>} />
                 <Route path="/share" element={<Protected><Share /></Protected>} />
+                <Route path="/alerts" element={<Protected><Alerts /></Protected>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </CurrencyProvider>
